@@ -1,0 +1,162 @@
+<div class="page-head">
+  <div>
+    <h1 data-testid="admin-title">Registrar dashboard</h1>
+    <p class="sub">Spring 2026 bidding round</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn btn-secondary" routerLink="/admin/window" data-testid="to-window">Edit window</a>
+    <a class="btn btn-secondary" routerLink="/admin/classes" data-testid="to-classes">Manage classes</a>
+  </div>
+</div>
+
+@if (notice()) {
+  <app-error-banner tone="success" testid="reset-notice" [message]="notice()!" />
+}
+@if (undelivered() > 0) {
+  <app-error-banner
+    tone="warning"
+    testid="undelivered-banner"
+    title="Sign-in emails did not send"
+    message="{{ undelivered() }} student invitation email(s) failed to deliver. Those accounts exist but cannot sign in until the link is resent."
+  >
+    <a class="inline-link" routerLink="/admin/accounts" [queryParams]="{ tab: 'students' }">
+      Review students →
+    </a>
+  </app-error-banner>
+}
+
+<app-window-status [biddingWindow]="biddingWindow()" />
+
+<div class="tiles">
+  <div class="card tile">
+    <span class="k">Classes open</span>
+    <b data-testid="stat-classes">{{ classes().length }}</b>
+    <small>{{ totalSeats() }} seats total</small>
+  </div>
+  <div class="card tile">
+    <span class="k">Bids placed</span>
+    <b data-testid="stat-bids">{{ totalBids() }}</b>
+    <small>across all classes</small>
+  </div>
+  <div class="card tile">
+    <span class="k">Students bidding</span>
+    <b data-testid="stat-students">{{ studentsBidding() }}</b>
+    <small>of {{ students().length }} enrolled</small>
+  </div>
+  <div class="card tile">
+    <span class="k">Resolution</span>
+    <b data-testid="stat-resolution">{{ biddingWindow()?.resolvedAt ? 'Done' : 'Pending' }}</b>
+    <small>runs automatically at close</small>
+  </div>
+</div>
+
+<div class="split">
+  <section class="card panel">
+    <h2>Most contested classes</h2>
+    <div class="table-wrap">
+      <table data-testid="contested-table">
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th>Seats</th>
+            <th>Bids</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of hottest(); track row.id) {
+            <tr>
+              <td>
+                <strong>{{ row.name }}</strong>
+                <span class="code">{{ row.code }}</span>
+              </td>
+              <td class="mono">{{ row.seatCap }}</td>
+              <td class="mono">{{ row.bidCount }}</td>
+              <td class="right">
+                <a
+                  class="btn btn-ghost"
+                  [routerLink]="['/admin/classes', row.id, 'results']"
+                  attr.data-testid="view-results-{{ row.id }}"
+                >
+                  Results
+                </a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <aside class="side">
+    <div class="card panel">
+      <h2>Quick actions</h2>
+      <a class="quick" routerLink="/admin/accounts" [queryParams]="{ tab: 'students', modal: 'new-student' }" data-testid="quick-new-student">
+        <span>Add a student</span><small>Creates the account and emails a sign-in link</small>
+      </a>
+      <a class="quick" routerLink="/admin/accounts" [queryParams]="{ tab: 'admins', modal: 'new-admin' }" data-testid="quick-new-admin">
+        <span>Add an administrator</span><small>Root administrators only</small>
+      </a>
+      <a class="quick" routerLink="/admin/classes" [queryParams]="{ modal: 'new' }" data-testid="quick-new-class">
+        <span>Create a class</span><small>Set the seat cap for the round</small>
+      </a>
+      <a class="quick" routerLink="/admin/settings" data-testid="quick-settings">
+        <span>Service credentials</span><small>Resend and PostgreSQL configuration</small>
+      </a>
+    </div>
+
+    <div class="card panel danger-zone">
+      <h2>Danger zone</h2>
+      <p>
+        Resetting points sets every balance back to 1000, cancels all active bids, and reopens the
+        round. Historical won and lost bids are kept. This cannot be undone.
+      </p>
+      <button type="button" class="btn btn-danger btn-block" (click)="openReset()" data-testid="open-reset-modal">
+        Reset all points
+      </button>
+    </div>
+  </aside>
+</div>
+
+@if (resetModalOpen()) {
+  <app-modal
+    testid="reset-modal"
+    title="Reset all student points"
+    subtitle="This action is irreversible"
+    (closed)="closeModal()"
+  >
+    <app-error-banner
+      tone="error"
+      testid="reset-warning"
+      title="{{ students().length }} balances will be overwritten"
+      message="All active bids are cancelled and every student returns to 1000 points."
+    />
+    @if (resetError()) {
+      <app-error-banner testid="reset-error" [message]="resetError()!" />
+    }
+    <label class="field">
+      <span>Type <b class="phrase">{{ confirmPhrase }}</b> to confirm</span>
+      <input
+        name="confirm"
+        [ngModel]="typed()"
+        (ngModelChange)="typed.set($event)"
+        placeholder="{{ confirmPhrase }}"
+        data-testid="reset-confirm-input"
+      />
+    </label>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" (click)="closeModal()" data-testid="reset-cancel">
+        Keep balances
+      </button>
+      <button
+        type="button"
+        class="btn btn-danger"
+        (click)="confirmReset()"
+        [disabled]="!canReset()"
+        data-testid="reset-confirm"
+      >
+        Reset points
+      </button>
+    </div>
+  </app-modal>
+}

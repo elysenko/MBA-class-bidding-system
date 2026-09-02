@@ -1,0 +1,7 @@
+<div class="ws" [class]="'is-' + tone()" [class.dense]="dense" data-testid="window-status">
+  <span class="pulse" aria-hidden="true"></span>
+  <div class="copy">
+    <strong data-testid="window-state">{{ headline() }}</strong>
+    <span class="detail">{{ detail() }}</span>
+  </div>
+</div>

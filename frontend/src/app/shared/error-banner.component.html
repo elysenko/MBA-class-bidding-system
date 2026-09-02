@@ -1,0 +1,10 @@
+<div class="banner" [class]="'tone-' + tone" role="status" attr.data-testid="{{ testid }}">
+  <span class="glyph" aria-hidden="true">{{ glyph }}</span>
+  <div class="copy">
+    @if (title) {
+      <strong>{{ title }}</strong>
+    }
+    <span>{{ message }}</span>
+    <ng-content />
+  </div>
+</div>

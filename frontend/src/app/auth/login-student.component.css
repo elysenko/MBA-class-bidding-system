@@ -1,0 +1,17 @@
+.linklike {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.admin-link { margin-top: var(--space-3); font-size: var(--text-sm); }
+code {
+  font-family: var(--font-mono);
+  background: var(--color-surface-alt);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+}

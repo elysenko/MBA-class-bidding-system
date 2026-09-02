@@ -1,0 +1,19 @@
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.back:hover { color: var(--color-primary); }
+
+.panel { padding: var(--space-5); max-width: 640px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+
+.form-actions { display: flex; gap: var(--space-3); margin-top: var(--space-2); }
+.form-actions .btn { flex: 1; }
+
+@media (max-width: 768px) {
+  .two { grid-template-columns: 1fr; }
+}

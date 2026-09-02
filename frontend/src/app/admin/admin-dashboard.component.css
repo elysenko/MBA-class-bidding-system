@@ -1,0 +1,59 @@
+.head-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.head-actions .btn { min-height: 42px; font-size: var(--text-sm); }
+
+.inline-link { font-weight: 700; text-decoration: underline; }
+
+app-window-status { display: block; margin-bottom: var(--space-4); }
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+.tile { padding: var(--space-4); display: flex; flex-direction: column; gap: 2px; }
+.tile .k { font-size: var(--text-xs); color: var(--color-text-subtle); text-transform: uppercase; letter-spacing: 0.04em; }
+.tile b { font-size: var(--text-2xl); }
+.tile small { font-size: var(--text-xs); color: var(--color-text-subtle); }
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.panel { padding: var(--space-5); }
+.panel h2 { font-size: var(--text-md); margin-bottom: var(--space-4); }
+.side { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.code { display: block; font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-text-subtle); }
+.right { text-align: right; }
+
+.quick {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 56px;
+  justify-content: center;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  margin-bottom: var(--space-2);
+  transition: background var(--transition), border-color var(--transition);
+}
+.quick:hover, .quick:active { background: var(--color-primary-soft); border-color: var(--color-primary); }
+.quick span { font-weight: 600; font-size: var(--text-sm); }
+.quick small { font-size: var(--text-xs); color: var(--color-text-subtle); }
+
+.danger-zone { border-color: var(--color-danger); }
+.danger-zone h2 { color: var(--color-danger-strong); }
+.danger-zone p { font-size: var(--text-sm); color: var(--color-text-muted); }
+
+.phrase { font-family: var(--font-mono); color: var(--color-danger-strong); }
+.modal-actions { display: flex; gap: var(--space-3); }
+.modal-actions .btn { flex: 1; }
+
+@media (max-width: 900px) {
+  .split { grid-template-columns: 1fr; }
+}

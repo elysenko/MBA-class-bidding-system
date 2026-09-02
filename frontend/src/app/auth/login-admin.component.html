@@ -1,0 +1,50 @@
+<div class="auth-page admin" data-testid="login-admin-page">
+  <div class="auth-brand">
+    <span class="mark" aria-hidden="true">B</span>
+    <span><b>Bidwell</b><small>Administration</small></span>
+  </div>
+
+  <div class="auth-card">
+    <h1>Administrator sign-in</h1>
+    <p class="lede">Restricted to registrar staff accounts.</p>
+
+    @if (error()) {
+      <app-error-banner testid="admin-login-error" [message]="error()!" />
+    }
+
+    <form (ngSubmit)="submit()" novalidate>
+      <label class="field">
+        <span>Username</span>
+        <input
+          name="username"
+          [ngModel]="username()"
+          (ngModelChange)="username.set($event)"
+          autocomplete="username"
+          placeholder="registrar"
+          data-testid="admin-username"
+        />
+      </label>
+      <label class="field">
+        <span>Password</span>
+        <input
+          name="password"
+          type="password"
+          [ngModel]="password()"
+          (ngModelChange)="password.set($event)"
+          autocomplete="current-password"
+          placeholder="••••••••"
+          data-testid="admin-password"
+        />
+      </label>
+      <button type="submit" class="btn btn-block" data-testid="admin-login-submit">Sign in</button>
+    </form>
+
+    <button type="button" class="auth-demo" (click)="demo()" data-testid="admin-demo-login">
+      Skip login — Demo Mode
+    </button>
+
+    <div class="auth-alt">
+      Student? <a routerLink="/login" data-testid="to-student-login">Use your emailed link</a>
+    </div>
+  </div>
+</div>

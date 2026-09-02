@@ -2,10 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>App</title>
+    <title>Bidwell — MBA Class Bidding</title>
     <base href="/" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#2f4bd8" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <script>
+      // The app is served both at the domain root and under a path prefix
+      // (preview mockups at /<mockup_id>/, deployments at /<image_name>/).
+      // Any first path segment that is not a known app route is treated as
+      // that prefix so deep links resolve under either layout.
+      (function () {
+        var KNOWN = ['', 'login', 'signup', 'classes', 'my-bids', 'results', 'admin'];
+        var seg = window.location.pathname.split('/')[1] || '';
+        if (KNOWN.indexOf(seg) === -1) {
+          var base = document.querySelector('base');
+          if (base) base.setAttribute('href', '/' + seg + '/');
+        }
+      })();
+    </script>
   </head>
   <body>
     <app-root></app-root>

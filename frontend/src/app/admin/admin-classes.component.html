@@ -1,0 +1,107 @@
+<div class="page-head">
+  <div>
+    <h1 data-testid="admin-classes-title">Classes</h1>
+    <p class="sub">Seat caps apply when the window closes and seats are awarded.</p>
+  </div>
+  <button type="button" class="btn" (click)="openCreate()" data-testid="new-class">New class</button>
+</div>
+
+@if (notice()) {
+  <app-error-banner tone="success" testid="class-notice" [message]="notice()!" />
+}
+
+@if (classes().length === 0) {
+  <div class="card empty" data-testid="admin-classes-empty">
+    <h3>No classes yet</h3>
+    <p>Create the first class so students have something to bid on.</p>
+    <button type="button" class="btn" (click)="openCreate()">Create a class</button>
+  </div>
+} @else {
+  <div class="card table-wrap">
+    <table data-testid="admin-classes-table">
+      <thead>
+        <tr>
+          <th>Class</th>
+          <th>Faculty</th>
+          <th>Seat cap</th>
+          <th>Bids</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of classes(); track row.id) {
+          <tr attr.data-testid="admin-class-{{ row.id }}">
+            <td>
+              <strong>{{ row.name }}</strong>
+              <span class="code">{{ row.code }}</span>
+            </td>
+            <td class="muted">{{ row.faculty }}</td>
+            <td class="mono">{{ row.seatCap }}</td>
+            <td class="mono">{{ row.bidCount }}</td>
+            <td class="row-actions">
+              <a
+                class="btn btn-secondary"
+                [routerLink]="['/admin/classes', row.id, 'edit']"
+                attr.data-testid="edit-class-{{ row.id }}"
+              >
+                Edit
+              </a>
+              <a
+                class="btn btn-ghost"
+                [routerLink]="['/admin/classes', row.id, 'results']"
+                attr.data-testid="results-class-{{ row.id }}"
+              >
+                Results
+              </a>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+@if (createModalOpen()) {
+  <app-modal
+    testid="new-class-modal"
+    title="New class"
+    subtitle="Students bid for these seats"
+    (closed)="closeModal()"
+  >
+    @if (formError()) {
+      <app-error-banner testid="new-class-error" [message]="formError()!" />
+    }
+    <label class="field">
+      <span>Class name</span>
+      <input name="name" [ngModel]="draftName()" (ngModelChange)="draftName.set($event)"
+             placeholder="Advanced Corporate Valuation" data-testid="new-class-name" />
+    </label>
+    <div class="two">
+      <label class="field">
+        <span>Course code</span>
+        <input name="code" [ngModel]="draftCode()" (ngModelChange)="draftCode.set($event)"
+               placeholder="FIN-641" data-testid="new-class-code" />
+      </label>
+      <label class="field">
+        <span>Seat cap</span>
+        <input name="seatCap" type="number" min="1" inputmode="numeric"
+               [ngModel]="draftSeatCap()" (ngModelChange)="draftSeatCap.set($event)"
+               data-testid="new-class-seatcap" />
+        <span class="hint">Must be at least 1. Defaults to 30.</span>
+      </label>
+    </div>
+    <label class="field">
+      <span>Faculty</span>
+      <input name="faculty" [ngModel]="draftFaculty()" (ngModelChange)="draftFaculty.set($event)"
+             placeholder="Prof. E. Marchetti" data-testid="new-class-faculty" />
+    </label>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" (click)="closeModal()" data-testid="new-class-cancel">
+        Cancel
+      </button>
+      <button type="button" class="btn" (click)="create()" data-testid="new-class-submit">
+        Create class
+      </button>
+    </div>
+  </app-modal>
+}

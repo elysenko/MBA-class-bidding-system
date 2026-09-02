@@ -1,0 +1,71 @@
+<div class="page-head">
+  <div>
+    <h1 data-testid="window-title">Bidding window</h1>
+    <p class="sub">One window governs every class. Seats are awarded automatically at close.</p>
+  </div>
+  <a class="btn btn-secondary" routerLink="/admin" data-testid="window-to-dashboard">Dashboard</a>
+</div>
+
+<app-window-status [biddingWindow]="current()" />
+
+@if (saved()) {
+  <app-error-banner tone="success" testid="window-saved" message="Bidding window updated." />
+}
+@if (formError()) {
+  <app-error-banner testid="window-error" [message]="formError()!" />
+}
+
+<form class="card panel" (ngSubmit)="save()" novalidate>
+  <div class="two">
+    <label class="field">
+      <span>Opens at</span>
+      <input
+        type="datetime-local"
+        name="opensAt"
+        [ngModel]="opensAt()"
+        (ngModelChange)="opensAt.set($event)"
+        data-testid="window-opens"
+      />
+    </label>
+    <label class="field">
+      <span>Closes at</span>
+      <input
+        type="datetime-local"
+        name="closesAt"
+        [ngModel]="closesAt()"
+        (ngModelChange)="closesAt.set($event)"
+        data-testid="window-closes"
+      />
+      @if (!rangeValid()) {
+        <span class="hint invalid" data-testid="window-range-hint">
+          Close must be later than open.
+        </span>
+      }
+    </label>
+  </div>
+
+  <app-error-banner
+    tone="warning"
+    testid="window-round-warning"
+    title="Saving a future close time starts a new round"
+    message="Resolution is cleared and seats are awarded again when the new close time passes. Balances are not changed — use Reset points for that."
+  />
+
+  <div class="form-actions">
+    <a class="btn btn-secondary" routerLink="/admin" data-testid="window-cancel">Cancel</a>
+    <button type="submit" class="btn" [disabled]="!rangeValid()" data-testid="window-save">
+      Save window
+    </button>
+  </div>
+</form>
+
+<section class="card panel timeline">
+  <h2>What happens at close</h2>
+  <ol>
+    <li><b>1.</b> Bidding locks — no new bids, edits, or cancellations.</li>
+    <li><b>2.</b> For each class, the highest bids win seats up to the seat cap.</li>
+    <li><b>3.</b> Ties for the last seat are broken by a random draw.</li>
+    <li><b>4.</b> Every resolved bid is deducted — losing bids are <b>not</b> refunded.</li>
+    <li><b>5.</b> Students see their outcomes on their Results page.</li>
+  </ol>
+</section>

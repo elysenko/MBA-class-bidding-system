@@ -1,0 +1,66 @@
+<div class="page-head">
+  <div>
+    <h1 data-testid="my-bids-title">My bids</h1>
+    <p class="sub">One active bid per class. Editing replaces the previous amount.</p>
+  </div>
+</div>
+
+<div class="strip">
+  <app-window-status [biddingWindow]="biddingWindow()" />
+  <app-balance-meter [balance]="balance()" [committed]="committed()" />
+</div>
+
+@if (notice()) {
+  <app-error-banner tone="success" testid="cancel-notice" [message]="notice()!" />
+}
+@if (!windowOpen()) {
+  <app-error-banner
+    tone="warning"
+    testid="my-bids-window-closed"
+    title="Bidding is closed"
+    message="Bids are locked while seats are awarded. See your Results page for outcomes."
+  />
+}
+
+@if (active().length === 0) {
+  <div class="card empty" data-testid="my-bids-empty">
+    <h3>No active bids</h3>
+    <p>Browse the catalogue and commit points to the classes you want most.</p>
+    <a class="btn" routerLink="/classes" data-testid="empty-to-classes">Browse classes</a>
+  </div>
+} @else {
+  <ul class="bid-list" data-testid="my-bids-list">
+    @for (bid of active(); track bid.id) {
+      <li class="card bid-row" attr.data-testid="bid-row-{{ bid.id }}">
+        <div class="who">
+          <span class="code">{{ bid.classCode }}</span>
+          <a class="name" [routerLink]="['/classes', bid.classId]">{{ bid.className }}</a>
+          <span class="when">Updated {{ bid.updatedAt }}</span>
+        </div>
+        <div class="amount">
+          <b>{{ bid.amount }}</b>
+          <span>pts</span>
+        </div>
+        <div class="row-actions">
+          <a
+            class="btn btn-secondary"
+            [routerLink]="['/classes', bid.classId]"
+            [queryParams]="{ modal: 'bid' }"
+            attr.data-testid="edit-bid-{{ bid.id }}"
+          >
+            Edit
+          </a>
+          <button
+            type="button"
+            class="btn btn-ghost danger"
+            (click)="cancel(bid)"
+            [disabled]="!windowOpen()"
+            attr.data-testid="cancel-bid-{{ bid.id }}"
+          >
+            Cancel
+          </button>
+        </div>
+      </li>
+    }
+  </ul>
+}

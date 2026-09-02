@@ -1,0 +1,13 @@
+<div class="meter" [class.compact]="compact" data-testid="balance-meter">
+  <div class="row">
+    <span class="label">Available to bid</span>
+    <span class="value" data-testid="balance-available">{{ available() }} pts</span>
+  </div>
+  <div class="track" role="img" attr.aria-label="{{ spent() }} of {{ total() }} points committed">
+    <div class="fill" [style.width.%]="percent()"></div>
+  </div>
+  <div class="row legend">
+    <span><i class="dot committed"></i> {{ spent() }} committed</span>
+    <span><i class="dot total"></i> {{ total() }} balance</span>
+  </div>
+</div>

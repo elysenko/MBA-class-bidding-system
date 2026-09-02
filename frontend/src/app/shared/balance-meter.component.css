@@ -1,0 +1,42 @@
+.meter {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+.meter.compact { padding: var(--space-3); }
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.label { font-size: var(--text-sm); color: var(--color-text-muted); font-weight: 600; }
+.value { font-size: var(--text-lg); font-weight: 700; color: var(--color-accent-strong); }
+
+.track {
+  height: 8px;
+  margin: var(--space-3) 0 var(--space-2);
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.fill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: var(--radius-pill);
+  transition: width var(--transition);
+}
+
+.legend { font-size: var(--text-xs); color: var(--color-text-subtle); }
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  margin-right: var(--space-1);
+}
+.dot.committed { background: var(--color-accent); }
+.dot.total { background: var(--color-surface-alt); border: 1px solid var(--color-border-strong); }

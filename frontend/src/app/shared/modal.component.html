@@ -1,0 +1,16 @@
+<div class="scrim" (click)="closed.emit()" attr.data-testid="{{ testid }}-scrim"></div>
+<div class="sheet" role="dialog" aria-modal="true" attr.data-testid="{{ testid }}">
+  <header>
+    <div>
+      <h2>{{ title }}</h2>
+      @if (subtitle) {
+        <p class="sub">{{ subtitle }}</p>
+      }
+    </div>
+    <button type="button" class="close" (click)="closed.emit()" aria-label="Close"
+            attr.data-testid="{{ testid }}-close">✕</button>
+  </header>
+  <div class="body">
+    <ng-content />
+  </div>
+</div>

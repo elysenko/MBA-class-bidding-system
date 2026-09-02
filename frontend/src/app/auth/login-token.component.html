@@ -1,0 +1,27 @@
+<div class="auth-page" data-testid="login-token-page">
+  <div class="auth-brand">
+    <span class="mark" aria-hidden="true">B</span>
+    <span><b>Bidwell</b><small>MBA class bidding</small></span>
+  </div>
+
+  <div class="auth-card">
+    @if (checking()) {
+      <h1>Signing you in…</h1>
+      <p class="lede">Verifying your one-time link.</p>
+      <div class="bar" aria-hidden="true"><span></span></div>
+    } @else if (error()) {
+      <h1>Link no longer valid</h1>
+      <app-error-banner testid="token-error" [message]="error()!" />
+      <button type="button" class="btn btn-block" (click)="retry()" data-testid="token-retry">
+        Enter a token manually
+      </button>
+      <div class="auth-alt">
+        Sign-in links are single-use and expire after 7 days.
+        <a routerLink="/login" data-testid="to-login">Request a new one</a>
+      </div>
+    } @else {
+      <h1>Signed in</h1>
+      <p class="lede">Taking you to the class list…</p>
+    }
+  </div>
+</div>

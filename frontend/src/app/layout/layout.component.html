@@ -1,0 +1,77 @@
+<div class="shell" data-testid="app-shell">
+  <aside class="sidebar">
+    <a class="brand" routerLink="/" data-testid="brand">
+      <span class="mark" aria-hidden="true">B</span>
+      <span class="wordmark">
+        <strong>Bidwell</strong>
+        <small>{{ isAdmin() ? 'Administration' : 'Class bidding' }}</small>
+      </span>
+    </a>
+
+    <nav aria-label="Primary">
+      @for (item of nav(); track item.path) {
+        <a
+          class="nav-item"
+          [routerLink]="item.path"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: item.exact }"
+          attr.data-testid="nav-{{ item.short.toLowerCase() }}"
+        >
+          <span class="glyph" aria-hidden="true">{{ item.glyph }}</span>
+          {{ item.label }}
+        </a>
+      }
+    </nav>
+
+    <div class="side-foot">
+      <app-window-status [biddingWindow]="biddingWindow()" [dense]="true" />
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <a class="brand mobile-brand" routerLink="/">
+        <span class="mark" aria-hidden="true">B</span>
+        <strong>Bidwell</strong>
+      </a>
+
+      <div class="spacer"></div>
+
+      @if (!isAdmin()) {
+        <span class="points" data-testid="topbar-points">
+          <b>{{ identity()?.pointBalance ?? 0 }}</b> pts
+        </span>
+      }
+
+      <div class="who">
+        <span class="avatar" aria-hidden="true">{{ initials() }}</span>
+        <span class="who-copy">
+          <strong data-testid="topbar-name">{{ identity()?.name }}</strong>
+          <small>{{ isAdmin() ? (identity()?.isRoot ? 'Root admin' : 'Admin') : identity()?.email }}</small>
+        </span>
+      </div>
+
+      <button type="button" class="btn btn-secondary logout" (click)="logout()" data-testid="logout">
+        Sign out
+      </button>
+    </header>
+
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+
+  <nav class="tabbar" aria-label="Primary mobile">
+    @for (item of nav(); track item.path) {
+      <a
+        [routerLink]="item.path"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: item.exact }"
+        attr.data-testid="tab-{{ item.short.toLowerCase() }}"
+      >
+        <span class="glyph" aria-hidden="true">{{ item.glyph }}</span>
+        <span class="tab-label">{{ item.short }}</span>
+      </a>
+    }
+  </nav>
+</div>

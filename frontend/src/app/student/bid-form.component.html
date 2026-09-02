@@ -1,0 +1,65 @@
+@if (!windowOpen) {
+  <app-error-banner
+    tone="warning"
+    testid="bid-window-closed"
+    title="Bidding is closed"
+    message="The bidding window has closed, so bids can no longer be placed, edited, or cancelled."
+  />
+}
+
+@if (error()) {
+  <app-error-banner testid="bid-error" [message]="error()!" />
+}
+
+<p class="context">
+  Bidding on <strong>{{ className }}</strong>. You have
+  <b data-testid="bid-available">{{ headroom() }} points</b> available to commit.
+</p>
+
+<label class="field">
+  <span>Bid amount (points)</span>
+  <input
+    type="number"
+    name="amount"
+    inputmode="numeric"
+    min="1"
+    [max]="headroom()"
+    [ngModel]="amount() ?? currentAmount"
+    (ngModelChange)="amount.set($event)"
+    [disabled]="!windowOpen"
+    placeholder="0"
+    data-testid="bid-amount"
+  />
+  <span class="hint">Points spent on a losing bid are not refunded.</span>
+</label>
+
+<div class="quick">
+  @for (value of quickAmounts(); track value) {
+    <button
+      type="button"
+      class="chip"
+      (click)="setAmount(value)"
+      [disabled]="!windowOpen"
+      attr.data-testid="quick-{{ value }}"
+    >
+      {{ value }}
+    </button>
+  }
+</div>
+
+<div class="actions">
+  @if (currentAmount !== null) {
+    <button
+      type="button"
+      class="btn btn-secondary"
+      (click)="cancelledBid.emit()"
+      [disabled]="!windowOpen"
+      data-testid="bid-cancel"
+    >
+      Cancel bid
+    </button>
+  }
+  <button type="button" class="btn" (click)="submit()" [disabled]="!windowOpen" data-testid="bid-submit">
+    {{ currentAmount === null ? 'Place bid' : 'Update bid' }}
+  </button>
+</div>

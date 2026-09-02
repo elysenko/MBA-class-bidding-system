@@ -1,0 +1,77 @@
+<a class="back" routerLink="/admin/classes" data-testid="results-back">← All classes</a>
+
+<div class="page-head">
+  <div>
+    <span class="code">{{ classCode() }}</span>
+    <h1 data-testid="class-results-title">{{ className() }} — results</h1>
+    <p class="sub">
+      {{ seatCap() }} seats · {{ rows().length }} bids ·
+      {{ resolvedAt() ? 'resolved ' + resolvedAt()! : 'not yet resolved' }}
+    </p>
+  </div>
+  <a class="btn btn-secondary" [routerLink]="['/admin/classes', classId(), 'edit']" data-testid="results-to-edit">
+    Edit class
+  </a>
+</div>
+
+@if (!resolvedAt()) {
+  <div class="card empty" data-testid="class-results-pending">
+    <h3>Seats have not been awarded yet</h3>
+    <p>Results appear automatically once the bidding window closes.</p>
+    <a class="btn btn-secondary" routerLink="/admin/window">Review the window</a>
+  </div>
+} @else {
+  <div class="tiles">
+    <div class="card tile">
+      <span class="k">Seats awarded</span>
+      <b data-testid="results-awarded">{{ winners().length }} / {{ seatCap() }}</b>
+    </div>
+    <div class="card tile">
+      <span class="k">Lowest winning bid</span>
+      <b data-testid="results-clearing">{{ clearingPrice() }} pts</b>
+    </div>
+    <div class="card tile">
+      <span class="k">Points collected</span>
+      <b data-testid="results-collected">{{ pointsCollected() }}</b>
+    </div>
+  </div>
+
+  @if (tiedAtCutoff()) {
+    <app-error-banner
+      tone="info"
+      testid="tiebreak-note"
+      title="Tie broken at random"
+      message="Several bids matched the lowest winning amount. The last seat was assigned by random draw, as specified."
+    />
+  }
+
+  <div class="card table-wrap">
+    <table data-testid="class-results-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>Bid</th>
+          <th>Outcome</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.id) {
+          <tr [class.is-cut]="row.rank === winners().length + 1" attr.data-testid="class-result-{{ row.id }}">
+            <td class="mono rank">{{ row.rank }}</td>
+            <td>
+              <strong>{{ row.studentName }}</strong>
+              <span class="mail">{{ row.studentEmail }}</span>
+            </td>
+            <td class="mono amount">{{ row.amount }} pts</td>
+            <td>
+              <span class="badge" [class]="row.outcome === 'won' ? 'badge-success' : 'badge-danger'">
+                {{ row.outcome === 'won' ? 'Seat awarded' : 'No seat' }}
+              </span>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

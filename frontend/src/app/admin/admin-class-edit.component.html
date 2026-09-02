@@ -1,0 +1,64 @@
+<a class="back" routerLink="/admin/classes" data-testid="back-to-admin-classes">← All classes</a>
+
+@if (!current()) {
+  <div class="card empty" data-testid="edit-class-not-found">
+    <h3>Class not found</h3>
+    <p>It may have been removed from this round.</p>
+    <a class="btn btn-secondary" routerLink="/admin/classes">Back to classes</a>
+  </div>
+} @else {
+  <div class="page-head">
+    <div>
+      <h1 data-testid="edit-class-title">Edit {{ current()!.code }}</h1>
+      <p class="sub">{{ current()!.bidCount }} bids already placed on this class.</p>
+    </div>
+    <a
+      class="btn btn-secondary"
+      [routerLink]="['/admin/classes', current()!.id, 'results']"
+      data-testid="edit-to-results"
+    >
+      View results
+    </a>
+  </div>
+
+  @if (saved()) {
+    <app-error-banner tone="success" testid="edit-saved" message="Class updated." />
+  }
+  @if (formError()) {
+    <app-error-banner testid="edit-error" [message]="formError()!" />
+  }
+
+  <form class="card panel" (ngSubmit)="save()" novalidate>
+    <label class="field">
+      <span>Class name</span>
+      <input name="name" [ngModel]="form().name" (ngModelChange)="patch('name', $event)"
+             data-testid="edit-class-name" />
+    </label>
+    <div class="two">
+      <label class="field">
+        <span>Course code</span>
+        <input name="code" [ngModel]="form().code" (ngModelChange)="patch('code', $event)"
+               data-testid="edit-class-code" />
+      </label>
+      <label class="field">
+        <span>Seat cap</span>
+        <input name="seatCap" type="number" min="1" inputmode="numeric"
+               [ngModel]="form().seatCap" (ngModelChange)="patch('seatCap', $event)"
+               data-testid="edit-class-seatcap" />
+        <span class="hint">Lowering the cap after bids are placed reduces the number of winners.</span>
+      </label>
+    </div>
+    <label class="field">
+      <span>Faculty</span>
+      <input name="faculty" [ngModel]="form().faculty" (ngModelChange)="patch('faculty', $event)"
+             data-testid="edit-class-faculty" />
+    </label>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary" (click)="done()" data-testid="edit-cancel">
+        Back
+      </button>
+      <button type="submit" class="btn" data-testid="edit-save">Save changes</button>
+    </div>
+  </form>
+}

@@ -1,0 +1,93 @@
+<a class="back" routerLink="/classes" data-testid="back-to-classes">← All classes</a>
+
+@if (!current()) {
+  <div class="card empty" data-testid="class-not-found">
+    <h3>Class not found</h3>
+    <p>This class is no longer in the Spring 2026 catalogue.</p>
+    <a class="btn btn-secondary" routerLink="/classes">Back to catalogue</a>
+  </div>
+} @else {
+  <div class="page-head">
+    <div>
+      <span class="code">{{ current()!.code }}</span>
+      <h1 data-testid="class-title">{{ current()!.name }}</h1>
+      <p class="sub">{{ current()!.faculty }} · {{ current()!.term }}</p>
+    </div>
+    <button type="button" class="btn desktop-cta" (click)="openBid()" data-testid="open-bid-modal">
+      {{ current()!.myBidAmount === null ? 'Place bid' : 'Edit bid' }}
+    </button>
+  </div>
+
+  @if (notice()) {
+    <app-error-banner tone="success" testid="bid-notice" [message]="notice()!" />
+  }
+  @if (!windowOpen()) {
+    <app-error-banner
+      tone="warning"
+      testid="detail-window-closed"
+      title="Bidding is closed"
+      message="Bids can no longer be placed, edited, or cancelled. Results are published on your Results page."
+    />
+  }
+
+  <div class="split">
+    <section class="card panel">
+      <h2>Seat allocation</h2>
+      <dl class="facts">
+        <div>
+          <dt>Seat cap</dt>
+          <dd data-testid="detail-seat-cap">{{ current()!.seatCap }}</dd>
+        </div>
+        <div>
+          <dt>Bids placed</dt>
+          <dd>{{ current()!.bidCount }}</dd>
+        </div>
+        <div>
+          <dt>Seats taken</dt>
+          <dd>{{ current()!.seatsTaken === null ? 'After resolution' : current()!.seatsTaken }}</dd>
+        </div>
+      </dl>
+      <p class="note">
+        When the window closes, the {{ current()!.seatCap }} highest bids win a seat. Ties for the
+        last seat are broken at random. You never see other students' bids.
+      </p>
+    </section>
+
+    <aside class="side">
+      <app-window-status [biddingWindow]="biddingWindow()" [dense]="true" />
+
+      <div class="card panel your-bid">
+        <h2>Your bid</h2>
+        @if (current()!.myBidAmount === null) {
+          <p class="none" data-testid="detail-no-bid">You have not bid on this class.</p>
+        } @else {
+          <p class="amount" data-testid="detail-my-bid">{{ current()!.myBidAmount }} <span>pts</span></p>
+          <span class="badge badge-primary">Active</span>
+        }
+        <button type="button" class="btn btn-block" (click)="openBid()" data-testid="open-bid-modal-side">
+          {{ current()!.myBidAmount === null ? 'Place bid' : 'Edit or cancel' }}
+        </button>
+      </div>
+
+      <app-balance-meter [balance]="balance()" [committed]="committed()" />
+    </aside>
+  </div>
+
+  @if (bidModalOpen()) {
+    <app-modal
+      testid="bid-modal"
+      title="Bid on {{ current()!.code }}"
+      subtitle="One active bid per class"
+      (closed)="closeModal()"
+    >
+      <app-bid-form
+        [className]="current()!.name"
+        [available]="availableForThisClass()"
+        [currentAmount]="current()!.myBidAmount"
+        [windowOpen]="windowOpen()"
+        (submitted)="placeBid($event)"
+        (cancelledBid)="cancelBid()"
+      />
+    </app-modal>
+  }
+}

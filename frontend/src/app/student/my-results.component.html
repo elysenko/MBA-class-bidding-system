@@ -1,0 +1,77 @@
+<div class="page-head">
+  <div>
+    <h1 data-testid="results-title">My results</h1>
+    <p class="sub">Outcomes for the round that closed on {{ biddingWindow()?.closesAt }}.</p>
+  </div>
+</div>
+
+<app-window-status [biddingWindow]="biddingWindow()" />
+
+@if (!resolved()) {
+  <div class="card empty" data-testid="results-pending">
+    <h3>Results are not out yet</h3>
+    <p>Seats are awarded automatically when the bidding window closes. Check back then.</p>
+    <a class="btn btn-secondary" routerLink="/my-bids">Review my bids</a>
+  </div>
+} @else if (results().length === 0) {
+  <div class="card empty" data-testid="results-empty">
+    <h3>You did not bid this round</h3>
+    <p>No points were spent, and your balance is unchanged.</p>
+    <a class="btn" routerLink="/classes">Browse classes</a>
+  </div>
+} @else {
+  <div class="summary">
+    <div class="card tile won">
+      <span class="k">Seats won</span>
+      <b data-testid="summary-won">{{ won().length }}</b>
+    </div>
+    <div class="card tile lost">
+      <span class="k">Bids lost</span>
+      <b data-testid="summary-lost">{{ lost().length }}</b>
+    </div>
+    <div class="card tile">
+      <span class="k">Points spent</span>
+      <b data-testid="summary-spent">{{ spent() }}</b>
+    </div>
+    <div class="card tile">
+      <span class="k">Spent on losses</span>
+      <b data-testid="summary-forfeited">{{ forfeited() }}</b>
+    </div>
+  </div>
+
+  <app-error-banner
+    tone="info"
+    testid="no-refund-note"
+    message="Points committed to a losing bid are not refunded. Your balance reflects every resolved bid."
+  />
+
+  <div class="card table-wrap">
+    <table data-testid="results-table">
+      <thead>
+        <tr>
+          <th>Class</th>
+          <th>My bid</th>
+          <th>Lowest winning bid</th>
+          <th>Outcome</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of results(); track row.id) {
+          <tr attr.data-testid="result-row-{{ row.id }}">
+            <td>
+              <a class="cls" [routerLink]="['/classes', row.classId]">{{ row.className }}</a>
+              <span class="code">{{ row.classCode }}</span>
+            </td>
+            <td class="mono">{{ row.amount }} pts</td>
+            <td class="mono muted">{{ row.clearingPrice }} pts</td>
+            <td>
+              <span class="badge" [class]="row.outcome === 'won' ? 'badge-success' : 'badge-danger'">
+                {{ row.outcome === 'won' ? 'Seat awarded' : 'No seat' }}
+              </span>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

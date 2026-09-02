@@ -1,0 +1,62 @@
+<div class="auth-page" data-testid="signup-page">
+  <div class="auth-brand">
+    <span class="mark" aria-hidden="true">B</span>
+    <span><b>Bidwell</b><small>MBA class bidding</small></span>
+  </div>
+
+  <div class="auth-card">
+    @if (!signupEnabled()) {
+      <h1>Registration is closed</h1>
+      <app-error-banner
+        tone="info"
+        testid="signup-disabled"
+        title="Public signup is disabled"
+        message="Student and administrator accounts are created by the registrar. Contact an administrator to be enrolled — you will receive a one-time sign-in link by email."
+      />
+      <a class="btn btn-block" routerLink="/login" data-testid="signup-to-login">
+        I already have a sign-in link
+      </a>
+    } @else {
+      <h1>Create your account</h1>
+      <p class="lede">You start with 1000 bidding points.</p>
+
+      @if (error()) {
+        <app-error-banner testid="signup-error" [message]="error()!" />
+      }
+
+      <form (ngSubmit)="submit()" novalidate>
+        <label class="field">
+          <span>Full name</span>
+          <input
+            name="name"
+            [ngModel]="name()"
+            (ngModelChange)="name.set($event)"
+            autocomplete="name"
+            placeholder="Priya Raghunathan"
+            data-testid="signup-name"
+          />
+        </label>
+        <label class="field">
+          <span>School email</span>
+          <input
+            name="email"
+            type="email"
+            [ngModel]="email()"
+            (ngModelChange)="email.set($event)"
+            autocomplete="email"
+            placeholder="you@mba.example.edu"
+            data-testid="signup-email"
+          />
+        </label>
+        <button type="submit" class="btn btn-block" data-testid="signup-submit">Create account</button>
+      </form>
+    }
+
+    <div class="auth-alt">
+      <a routerLink="/login" data-testid="signup-back">Back to sign-in</a>
+      <button type="button" class="flag" (click)="toggleFlag()" data-testid="signup-toggle-flag">
+        Preview the {{ signupEnabled() ? 'disabled' : 'enabled' }} state
+      </button>
+    </div>
+  </div>
+</div>

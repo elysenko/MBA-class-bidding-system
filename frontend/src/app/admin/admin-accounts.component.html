@@ -1,0 +1,193 @@
+<div class="page-head">
+  <div>
+    <h1 data-testid="accounts-title">Accounts</h1>
+    <p class="sub">Students receive a one-time sign-in link. Only root administrators can create accounts.</p>
+  </div>
+  <button
+    type="button"
+    class="btn"
+    (click)="openModal(tab() === 'admins' ? 'new-admin' : 'new-student')"
+    data-testid="accounts-new"
+  >
+    {{ tab() === 'admins' ? 'New administrator' : 'New student' }}
+  </button>
+</div>
+
+@if (notice()) {
+  <app-error-banner tone="success" testid="accounts-notice" [message]="notice()!" />
+}
+@if (!isRoot()) {
+  <app-error-banner
+    tone="info"
+    testid="not-root-banner"
+    title="Read-only"
+    message="You are signed in as a non-root administrator, so account creation is disabled. You can still review every account."
+  />
+}
+@for (row of undelivered(); track row.id) {
+  <app-error-banner
+    tone="error"
+    testid="undelivered-{{ row.id }}"
+    title="Sign-in email not delivered"
+    message="{{ row.name }} ({{ row.email }}) has an account and 1000 points, but the invitation email failed. They cannot sign in until a new link is sent."
+  />
+}
+
+<div class="tabs" role="tablist">
+  <button
+    type="button"
+    role="tab"
+    [attr.aria-selected]="tab() === 'students'"
+    [class.active]="tab() === 'students'"
+    (click)="setTab('students')"
+    data-testid="tab-students"
+  >
+    Students <span class="count">{{ students().length }}</span>
+  </button>
+  <button
+    type="button"
+    role="tab"
+    [attr.aria-selected]="tab() === 'admins'"
+    [class.active]="tab() === 'admins'"
+    (click)="setTab('admins')"
+    data-testid="tab-admins"
+  >
+    Administrators <span class="count">{{ admins().length }}</span>
+  </button>
+</div>
+
+@if (tab() === 'students') {
+  <div class="card table-wrap">
+    <table data-testid="students-table">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Points</th>
+          <th>Active bids</th>
+          <th>Sign-in link</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of students(); track row.id) {
+          <tr attr.data-testid="student-row-{{ row.id }}">
+            <td>
+              <strong>{{ row.name }}</strong>
+              <span class="mail">{{ row.email }}</span>
+            </td>
+            <td class="mono">{{ row.pointBalance }}</td>
+            <td class="mono">{{ row.activeBids }}</td>
+            <td>
+              <span class="badge" [class]="tokenTone(row.tokenState)">{{ row.tokenState }}</span>
+              @if (!row.emailDelivered) {
+                <span class="badge badge-danger fail">Email failed</span>
+              }
+            </td>
+            <td class="right">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                (click)="resend(row)"
+                [disabled]="!isRoot()"
+                attr.data-testid="resend-{{ row.id }}"
+              >
+                Resend link
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+} @else {
+  <div class="card table-wrap">
+    <table data-testid="admins-table">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Last sign-in</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of admins(); track row.id) {
+          <tr attr.data-testid="admin-row-{{ row.id }}">
+            <td><strong>{{ row.username }}</strong></td>
+            <td class="mail">{{ row.email }}</td>
+            <td>
+              <span class="badge" [class]="row.isRoot ? 'badge-primary' : ''">
+                {{ row.isRoot ? 'Root admin' : 'Admin' }}
+              </span>
+            </td>
+            <td class="muted">{{ row.lastLoginAt ?? 'Never' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+@if (modal() === 'new-student') {
+  <app-modal
+    testid="new-student-modal"
+    title="New student"
+    subtitle="Starts with 1000 bidding points"
+    (closed)="closeModal()"
+  >
+    @if (formError()) {
+      <app-error-banner testid="new-student-error" [message]="formError()!" />
+    }
+    <label class="field">
+      <span>Full name</span>
+      <input name="sname" [ngModel]="draftName()" (ngModelChange)="draftName.set($event)"
+             placeholder="Priya Raghunathan" data-testid="new-student-name" />
+    </label>
+    <label class="field">
+      <span>School email</span>
+      <input name="semail" type="email" [ngModel]="draftEmail()" (ngModelChange)="draftEmail.set($event)"
+             placeholder="student@mba.example.edu" data-testid="new-student-email" />
+      <span class="hint">A one-time sign-in link is emailed on save and expires after 7 days.</span>
+    </label>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" (click)="closeModal()" data-testid="new-student-cancel">
+        Cancel
+      </button>
+      <button type="button" class="btn" (click)="createStudent()" data-testid="new-student-submit">
+        Create and email link
+      </button>
+    </div>
+  </app-modal>
+}
+
+@if (modal() === 'new-admin') {
+  <app-modal
+    testid="new-admin-modal"
+    title="New administrator"
+    subtitle="Root administrators only"
+    (closed)="closeModal()"
+  >
+    @if (formError()) {
+      <app-error-banner testid="new-admin-error" [message]="formError()!" />
+    }
+    <label class="field">
+      <span>Username</span>
+      <input name="ausername" [ngModel]="draftUsername()" (ngModelChange)="draftUsername.set($event)"
+             placeholder="j.okafor" data-testid="new-admin-username" />
+    </label>
+    <label class="field">
+      <span>Temporary password</span>
+      <input name="apassword" type="password" [ngModel]="draftPassword()"
+             (ngModelChange)="draftPassword.set($event)" placeholder="At least 8 characters"
+             data-testid="new-admin-password" />
+    </label>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" (click)="closeModal()" data-testid="new-admin-cancel">
+        Cancel
+      </button>
+      <button type="button" class="btn" (click)="createAdmin()" data-testid="new-admin-submit">
+        Create administrator
+      </button>
+    </div>
+  </app-modal>
+}

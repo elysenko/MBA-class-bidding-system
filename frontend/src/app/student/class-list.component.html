@@ -1,0 +1,83 @@
+<div class="page-head">
+  <div>
+    <h1 data-testid="classes-title">Spring 2026 catalogue</h1>
+    <p class="sub">Place one bid per class. You can edit or cancel while the window is open.</p>
+  </div>
+</div>
+
+<div class="strip">
+  <app-window-status [biddingWindow]="biddingWindow()" />
+  <app-balance-meter [balance]="balance()" [committed]="committed()" />
+</div>
+
+<div class="toolbar">
+  <label class="search">
+    <span class="sr-only">Search classes</span>
+    <input
+      type="search"
+      placeholder="Search by title, code, or faculty"
+      [value]="query()"
+      (input)="setQuery($any($event.target).value)"
+      data-testid="class-search"
+    />
+  </label>
+  <label class="sortby">
+    <span class="sr-only">Sort classes</span>
+    <select [value]="sort()" (change)="setSort($any($event.target).value)" data-testid="class-sort">
+      <option value="name">Sort: Title A–Z</option>
+      <option value="seats">Sort: Most seats</option>
+      <option value="demand">Sort: Most contested</option>
+      <option value="my-bid">Sort: My bid</option>
+    </select>
+  </label>
+</div>
+
+@if (loading()) {
+  <p class="empty" data-testid="classes-loading">Loading classes…</p>
+} @else if (visible().length === 0) {
+  <div class="card empty" data-testid="classes-empty">
+    <h3>No classes match “{{ query() }}”</h3>
+    <p>Try a different title, course code, or faculty name.</p>
+    <button type="button" class="btn btn-secondary" (click)="setQuery('')">Clear search</button>
+  </div>
+} @else {
+  <ul class="grid" data-testid="classes-list">
+    @for (row of visible(); track row.id) {
+      <li class="card class-card" attr.data-testid="class-card-{{ row.id }}">
+        <a [routerLink]="['/classes', row.id]" class="card-link">
+          <div class="card-top">
+            <span class="code">{{ row.code }}</span>
+            <span class="badge" [class]="pressureTone(row)">{{ pressure(row) }}</span>
+          </div>
+          <h3>{{ row.name }}</h3>
+          <p class="faculty">{{ row.faculty }} · {{ row.term }}</p>
+          <dl class="stats">
+            <div>
+              <dt>Seats</dt>
+              <dd>{{ row.seatCap }}</dd>
+            </div>
+            <div>
+              <dt>Bids placed</dt>
+              <dd>{{ row.bidCount }}</dd>
+            </div>
+            <div>
+              <dt>My bid</dt>
+              <dd class="mybid" [class.none]="row.myBidAmount === null">
+                {{ row.myBidAmount === null ? 'None' : row.myBidAmount + ' pts' }}
+              </dd>
+            </div>
+          </dl>
+        </a>
+        <a
+          class="btn"
+          [class.btn-secondary]="row.myBidAmount !== null"
+          [routerLink]="['/classes', row.id]"
+          [queryParams]="{ modal: 'bid' }"
+          attr.data-testid="bid-cta-{{ row.id }}"
+        >
+          {{ row.myBidAmount === null ? 'Place bid' : 'Edit bid' }}
+        </a>
+      </li>
+    }
+  </ul>
+}

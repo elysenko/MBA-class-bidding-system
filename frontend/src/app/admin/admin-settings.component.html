@@ -1,0 +1,58 @@
+<div class="page-head">
+  <div>
+    <h1 data-testid="settings-title">Service credentials</h1>
+    <p class="sub">Values set here override the deployment environment for this instance.</p>
+  </div>
+</div>
+
+@if (unconfigured().length > 0) {
+  <app-error-banner
+    tone="warning"
+    testid="settings-unconfigured-banner"
+    title="The following need credentials to activate"
+    message="{{ unconfigured().join(', ') }}"
+  />
+}
+@if (notice()) {
+  <app-error-banner tone="success" testid="settings-notice" [message]="notice()!" />
+}
+
+@for (service of services(); track service) {
+  <section class="card svc" attr.data-testid="settings-service-{{ service }}">
+    <header>
+      <h2>{{ service }}</h2>
+      <span class="badge" [class]="serviceConfigured(service) ? 'badge-success' : 'badge-warning'">
+        {{ serviceConfigured(service) ? 'Configured' : 'Needs credentials' }}
+      </span>
+    </header>
+
+    @for (entry of forService(service); track entry.id) {
+      <div class="entry" attr.data-testid="setting-{{ entry.id }}">
+        <div class="meta">
+          <strong>{{ entry.label }}</strong>
+          <code>{{ entry.envKey }}</code>
+          <p>{{ entry.description }}</p>
+          <span class="current" [class.unset]="!entry.configured">
+            {{ entry.maskedValue ?? 'Not set' }}
+          </span>
+        </div>
+        <div class="editor">
+          <label class="field">
+            <span class="sr-only">New value for {{ entry.label }}</span>
+            <input
+              type="password"
+              attr.name="setting-{{ entry.id }}"
+              [ngModel]="draftFor(entry.id)"
+              (ngModelChange)="setDraft(entry.id, $event)"
+              placeholder="Enter new value"
+              attr.data-testid="setting-input-{{ entry.id }}"
+            />
+          </label>
+          <button type="button" class="btn" (click)="save(entry)" attr.data-testid="setting-save-{{ entry.id }}">
+            Save
+          </button>
+        </div>
+      </div>
+    }
+  </section>
+}

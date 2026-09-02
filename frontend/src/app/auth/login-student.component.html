@@ -1,0 +1,56 @@
+<div class="auth-page" data-testid="login-student-page">
+  <div class="auth-brand">
+    <span class="mark" aria-hidden="true">B</span>
+    <span><b>Bidwell</b><small>MBA class bidding</small></span>
+  </div>
+
+  <div class="auth-card">
+    <h1>Student sign-in</h1>
+    <p class="lede">
+      Open the sign-in link we emailed you, or paste the token from that email below.
+    </p>
+
+    @if (error()) {
+      <app-error-banner testid="login-error" [message]="error()!" />
+    }
+    @if (requested()) {
+      <app-error-banner
+        tone="success"
+        testid="login-resent"
+        title="Check your inbox"
+        message="If that address belongs to an enrolled student, a new sign-in link is on its way. Links expire after 7 days."
+      />
+    }
+
+    <form (ngSubmit)="submit()" novalidate>
+      <label class="field">
+        <span>Sign-in token</span>
+        <input
+          name="token"
+          [ngModel]="token()"
+          (ngModelChange)="token.set($event)"
+          placeholder="e.g. 8Kq2-vT9x-Ld41-Rm7c"
+          autocomplete="one-time-code"
+          data-testid="token-input"
+        />
+        <span class="hint">Found at the end of your sign-in link, after <code>?token=</code>.</span>
+      </label>
+
+      <button type="submit" class="btn btn-block" data-testid="login-submit">Sign in</button>
+    </form>
+
+    <button type="button" class="auth-demo" (click)="demo()" data-testid="demo-login">
+      Skip login — Demo Mode
+    </button>
+
+    <div class="auth-alt">
+      Lost your link?
+      <button type="button" class="linklike" (click)="requestLink()" data-testid="request-link">
+        Email me a new one
+      </button>
+      <div class="admin-link">
+        Administrator? <a routerLink="/admin/login" data-testid="to-admin-login">Sign in here</a>
+      </div>
+    </div>
+  </div>
+</div>

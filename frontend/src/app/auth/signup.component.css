@@ -1,0 +1,11 @@
+.flag {
+  display: block;
+  margin: var(--space-3) auto 0;
+  min-height: 44px;
+  border: none;
+  background: none;
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  text-decoration: underline;
+  cursor: pointer;
+}
