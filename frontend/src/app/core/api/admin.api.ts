@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { ApiClient } from '../api.client';
 import { AdminAccount, SettingEntry, StudentAccount } from '../models';
+import { formatDate, formatDateTime } from '../format';
 
 export interface StudentMutationResult {
   student: StudentAccount;
@@ -13,6 +14,15 @@ interface StudentMutationPayload {
   email_delivered: boolean;
 }
 
+/** The API speaks ISO instants; the accounts table renders display strings. */
+function toAdminAccount(row: AdminAccount): AdminAccount {
+  return {
+    ...row,
+    lastLoginAt: row.lastLoginAt ? formatDateTime(row.lastLoginAt) : null,
+    createdAt: formatDate(row.createdAt),
+  };
+}
+
 /** Account provisioning, service credentials, and the destructive point reset. */
 @Injectable({ providedIn: 'root' })
 export class AdminApi {
@@ -22,8 +32,9 @@ export class AdminApi {
     return this.api.get<StudentAccount[]>('/admin/accounts/students');
   }
 
-  listAdmins(): Promise<AdminAccount[]> {
-    return this.api.get<AdminAccount[]>('/admin/accounts/admins');
+  async listAdmins(): Promise<AdminAccount[]> {
+    const rows = await this.api.get<AdminAccount[]>('/admin/accounts/admins');
+    return rows.map((row) => toAdminAccount(row));
   }
 
   async createStudent(name: string, email: string): Promise<StudentMutationResult> {
@@ -46,7 +57,7 @@ export class AdminApi {
       username,
       password,
     });
-    return payload.admin;
+    return toAdminAccount(payload.admin);
   }
 
   resetPoints(): Promise<{ bidsCancelled: number; studentsReset: number }> {

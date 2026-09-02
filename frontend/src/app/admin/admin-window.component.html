@@ -23,7 +23,7 @@
         type="datetime-local"
         name="opensAt"
         [ngModel]="opensAt()"
-        (ngModelChange)="opensAt.set($event)"
+        (ngModelChange)="edit('opensAt', $event)"
         data-testid="window-opens"
       />
     </label>
@@ -33,7 +33,7 @@
         type="datetime-local"
         name="closesAt"
         [ngModel]="closesAt()"
-        (ngModelChange)="closesAt.set($event)"
+        (ngModelChange)="edit('closesAt', $event)"
         data-testid="window-closes"
       />
       @if (!rangeValid()) {
@@ -53,7 +53,12 @@
 
   <div class="form-actions">
     <a class="btn btn-secondary" routerLink="/admin" data-testid="window-cancel">Cancel</a>
-    <button type="submit" class="btn" [disabled]="!rangeValid()" data-testid="window-save">
+    <button
+      type="submit"
+      class="btn"
+      [disabled]="!rangeValid() || loading()"
+      data-testid="window-save"
+    >
       Save window
     </button>
   </div>

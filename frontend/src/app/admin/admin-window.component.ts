@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { WindowApi } from '../core/api/window.api';
+import { toLocalInputValue } from '../core/format';
 import { BiddingWindow } from '../core/models';
 import { ErrorBannerComponent } from '../shared/error-banner.component';
 import { WindowStatusComponent } from '../shared/window-status.component';
@@ -15,22 +17,16 @@ import { WindowStatusComponent } from '../shared/window-status.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminWindowComponent {
+  private readonly windowApi = inject(WindowApi);
+
   readonly formError = signal<string | null>(null);
   readonly saved = signal(false);
+  readonly loading = signal(true);
 
-  readonly opensAt = signal('2026-03-12T09:00');
-  readonly closesAt = signal('2026-03-19T17:00');
+  readonly opensAt = signal('');
+  readonly closesAt = signal('');
 
-  readonly windows = signal<BiddingWindow[]>([
-    {
-      opensAt: '12 Mar 2026, 09:00',
-      closesAt: '19 Mar 2026, 17:00',
-      resolvedAt: null,
-      state: 'open',
-    },
-  ]);
-
-  readonly current = computed(() => this.windows()[0] ?? null);
+  readonly current = signal<BiddingWindow | null>(null);
 
   /** Mirrors the server's CHECK (closes_at > opens_at). */
   readonly rangeValid = computed(() => {
@@ -39,37 +35,51 @@ export class AdminWindowComponent {
     return Number.isFinite(opens) && Number.isFinite(closes) && closes > opens;
   });
 
-  readonly reopensRound = computed(() => this.current()?.resolvedAt !== null);
+  /** A future close time clears resolution, so saving starts another round. */
+  readonly reopensRound = computed(() => this.current()?.resolvedAtIso != null);
 
-  private format(value: string): string {
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime())
-      ? value
-      : parsed.toLocaleString('en-GB', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        });
+  constructor() {
+    void this.load();
   }
 
-  save(): void {
+  private apply(bidding: BiddingWindow): void {
+    this.current.set(bidding);
+    this.opensAt.set(toLocalInputValue(bidding.opensAtIso));
+    this.closesAt.set(toLocalInputValue(bidding.closesAtIso));
+  }
+
+  private async load(): Promise<void> {
+    try {
+      this.apply(await this.windowApi.get());
+    } catch (error) {
+      this.formError.set(
+        error instanceof Error ? error.message : 'The bidding window could not be loaded.',
+      );
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  edit(field: 'opensAt' | 'closesAt', value: string): void {
+    this.saved.set(false);
+    this[field].set(value);
+  }
+
+  async save(): Promise<void> {
     if (!this.rangeValid()) {
       this.formError.set('The close time must be later than the open time.');
       this.saved.set(false);
       return;
     }
-    this.formError.set(null);
-    this.windows.update((rows) => [
-      {
-        opensAt: this.format(this.opensAt()),
-        closesAt: this.format(this.closesAt()),
-        resolvedAt: null,
-        state: 'open',
-      },
-      ...rows.slice(1),
-    ]);
-    this.saved.set(true);
+    try {
+      this.apply(await this.windowApi.save(this.opensAt(), this.closesAt()));
+      this.formError.set(null);
+      this.saved.set(true);
+    } catch (error) {
+      this.saved.set(false);
+      this.formError.set(
+        error instanceof Error ? error.message : 'The bidding window could not be saved.',
+      );
+    }
   }
 }

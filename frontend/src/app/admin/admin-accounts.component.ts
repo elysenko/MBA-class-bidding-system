@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { AdminApi } from '../core/api/admin.api';
 import { AuthService } from '../core/auth.service';
 import { AdminAccount, StudentAccount } from '../core/models';
 import { ErrorBannerComponent } from '../shared/error-banner.component';
@@ -23,6 +24,7 @@ export class AdminAccountsComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
+  private readonly adminApi = inject(AdminApi);
 
   private readonly queryParams = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
@@ -37,23 +39,31 @@ export class AdminAccountsComponent {
   readonly draftUsername = signal('');
   readonly draftPassword = signal('');
 
-  readonly students = signal<StudentAccount[]>([
-    { id: 's1', name: 'Priya Raghunathan', email: 'priya.raghunathan@mba.example.edu', pointBalance: 1000, activeBids: 3, tokenState: 'used', emailDelivered: true, createdAt: '02 Mar 2026' },
-    { id: 's2', name: 'Tomas Delacroix', email: 'tomas.delacroix@mba.example.edu', pointBalance: 1000, activeBids: 2, tokenState: 'used', emailDelivered: true, createdAt: '02 Mar 2026' },
-    { id: 's3', name: 'Amara Nwosu', email: 'amara.nwosu@mba.example.edu', pointBalance: 1000, activeBids: 4, tokenState: 'pending', emailDelivered: false, createdAt: '04 Mar 2026' },
-    { id: 's4', name: 'Jonas Lindberg', email: 'jonas.lindberg@mba.example.edu', pointBalance: 1000, activeBids: 0, tokenState: 'expired', emailDelivered: true, createdAt: '28 Feb 2026' },
-    { id: 's5', name: 'Wen Li Zhang', email: 'wenli.zhang@mba.example.edu', pointBalance: 1000, activeBids: 5, tokenState: 'used', emailDelivered: true, createdAt: '01 Mar 2026' },
-  ]);
-
-  readonly admins = signal<AdminAccount[]>([
-    { id: 'a1', username: 'registrar', email: 'registrar@example.edu', isRoot: true, lastLoginAt: '14 Mar 2026, 08:12', createdAt: '01 Jan 2026' },
-    { id: 'a2', username: 'j.okafor', email: 'j.okafor@example.edu', isRoot: false, lastLoginAt: '13 Mar 2026, 16:40', createdAt: '18 Feb 2026' },
-    { id: 'a3', username: 'm.santos', email: 'm.santos@example.edu', isRoot: false, lastLoginAt: null, createdAt: '05 Mar 2026' },
-  ]);
+  readonly students = signal<StudentAccount[]>([]);
+  readonly admins = signal<AdminAccount[]>([]);
 
   readonly tab = computed(() => (this.queryParams().get('tab') === 'admins' ? 'admins' : 'students'));
   readonly modal = computed(() => this.queryParams().get('modal'));
   readonly undelivered = computed(() => this.students().filter((row) => !row.emailDelivered));
+
+  constructor() {
+    void this.load();
+  }
+
+  private async load(): Promise<void> {
+    try {
+      const [students, admins] = await Promise.all([
+        this.adminApi.listStudents(),
+        this.adminApi.listAdmins(),
+      ]);
+      this.students.set(students);
+      this.admins.set(admins);
+    } catch (error) {
+      this.formError.set(
+        error instanceof Error ? error.message : 'Accounts could not be loaded.',
+      );
+    }
+  }
 
   setTab(tab: 'admins' | 'students'): void {
     this.router.navigate([], {
@@ -84,77 +94,65 @@ export class AdminAccountsComponent {
     });
   }
 
-  createStudent(): void {
+  async createStudent(): Promise<void> {
     const name = this.draftName().trim();
     const email = this.draftEmail().trim();
     if (!name || !/^\S+@\S+\.\S+$/.test(email)) {
       this.formError.set('Enter a full name and a valid email address.');
       return;
     }
-    if (this.students().some((row) => row.email === email)) {
-      this.formError.set('A student with that email already exists.');
-      return;
+    try {
+      const { student, emailDelivered } = await this.adminApi.createStudent(name, email);
+      await this.load();
+      // A delivery failure never blocks the account — it is reported instead.
+      this.notice.set(
+        emailDelivered
+          ? `${student.name} was created with ${student.pointBalance} points and a sign-in link was emailed.`
+          : `${student.name} was created with ${student.pointBalance} points, but the sign-in email could not be delivered. Use Resend link.`,
+      );
+      this.formError.set(null);
+      this.closeModal();
+    } catch (error) {
+      this.formError.set(
+        error instanceof Error ? error.message : 'That student could not be created.',
+      );
     }
-    // Delivery is simulated: addresses outside the school domain fail to send,
-    // which is how the reviewer can see the email_delivered = false state.
-    const delivered = email.endsWith('@mba.example.edu');
-    this.students.update((rows) => [
-      {
-        id: `s${rows.length + 1}${name.length}`,
-        name,
-        email,
-        pointBalance: 1000,
-        activeBids: 0,
-        tokenState: 'pending',
-        emailDelivered: delivered,
-        createdAt: 'Just now',
-      },
-      ...rows,
-    ]);
-    this.notice.set(
-      delivered
-        ? `${name} was created with 1000 points and a sign-in link was emailed.`
-        : `${name} was created with 1000 points, but the sign-in email could not be delivered. Use Resend link.`,
-    );
-    this.formError.set(null);
-    this.closeModal();
   }
 
-  createAdmin(): void {
+  async createAdmin(): Promise<void> {
     const username = this.draftUsername().trim();
-    if (!username || this.draftPassword().trim().length < 8) {
+    const password = this.draftPassword().trim();
+    if (!username || password.length < 8) {
       this.formError.set('Enter a username and a password of at least 8 characters.');
       return;
     }
-    if (this.admins().some((row) => row.username === username)) {
-      this.formError.set('That username is already taken.');
-      return;
+    try {
+      const admin = await this.adminApi.createAdmin(username, password);
+      await this.load();
+      this.notice.set(`Administrator ${admin.username} created.`);
+      this.formError.set(null);
+      this.closeModal();
+    } catch (error) {
+      this.formError.set(
+        error instanceof Error ? error.message : 'That administrator could not be created.',
+      );
     }
-    this.admins.update((rows) => [
-      ...rows,
-      {
-        id: `a${rows.length + 1}`,
-        username,
-        email: `${username}@example.edu`,
-        isRoot: false,
-        lastLoginAt: null,
-        createdAt: 'Just now',
-      },
-    ]);
-    this.notice.set(`Administrator ${username} created.`);
-    this.formError.set(null);
-    this.closeModal();
   }
 
-  resend(student: StudentAccount): void {
-    this.students.update((rows) =>
-      rows.map((row) =>
-        row.id === student.id
-          ? { ...row, emailDelivered: true, tokenState: 'pending' as const }
-          : row,
-      ),
-    );
-    this.notice.set(`A new sign-in link was sent to ${student.email}. Earlier links are now invalid.`);
+  async resend(student: StudentAccount): Promise<void> {
+    try {
+      const { emailDelivered } = await this.adminApi.resendToken(student.id);
+      await this.load();
+      this.notice.set(
+        emailDelivered
+          ? `A new sign-in link was sent to ${student.email}. Earlier links are now invalid.`
+          : `A new sign-in link was issued for ${student.email}, but it could not be delivered.`,
+      );
+    } catch (error) {
+      this.formError.set(
+        error instanceof Error ? error.message : 'The sign-in link could not be resent.',
+      );
+    }
   }
 
   tokenTone(state: StudentAccount['tokenState']): string {
