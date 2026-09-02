@@ -1,7 +1,12 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
+# Force devDependencies (nest cli, typescript, prisma cli, ts-node) to install even
+# when NODE_ENV=production leaks into the build environment — npm's default
+# `omit=dev` behavior under NODE_ENV=production would otherwise strip @nestjs/cli
+# and break `nest build` below.
+ENV NODE_ENV=development
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --include=dev
 COPY . .
 RUN npx prisma generate
 RUN npm run build
