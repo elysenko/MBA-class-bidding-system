@@ -20,19 +20,21 @@ export class LoginTokenComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly checking = signal(true);
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     const token = this.route.snapshot.queryParamMap.get('token') ?? '';
-    this.checking.set(false);
     if (!token) {
+      this.checking.set(false);
       this.error.set(
         'This sign-in link is missing its token. Ask an administrator to resend your invitation.',
       );
       return;
     }
-    this.error.set(this.auth.studentLogin(token));
+    const failure = await this.auth.studentLogin(token);
+    this.checking.set(false);
+    this.error.set(failure);
   }
 
   retry(): void {
-    this.router.navigate(['/login']);
+    void this.router.navigate(['/login']);
   }
 }

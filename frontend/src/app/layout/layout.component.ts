@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../core/auth.service';
+import { WindowApi } from '../core/api/window.api';
 import { BiddingWindow } from '../core/models';
 import { WindowStatusComponent } from '../shared/window-status.component';
 
@@ -37,6 +38,7 @@ const ADMIN_NAV: NavItem[] = [
 })
 export class LayoutComponent {
   private readonly auth = inject(AuthService);
+  private readonly windowApi = inject(WindowApi);
 
   readonly identity = this.auth.identity;
   readonly isAdmin = this.auth.isAdmin;
@@ -50,18 +52,22 @@ export class LayoutComponent {
       .toUpperCase(),
   );
 
-  readonly windows = signal<BiddingWindow[]>([
-    {
-      opensAt: '12 Mar 2026, 09:00',
-      closesAt: '19 Mar 2026, 17:00',
-      resolvedAt: null,
-      state: 'open',
-    },
-  ]);
-
+  readonly windows = signal<BiddingWindow[]>([]);
   readonly biddingWindow = computed<BiddingWindow | null>(() => this.windows()[0] ?? null);
 
+  constructor() {
+    void this.load();
+  }
+
+  private async load(): Promise<void> {
+    try {
+      this.windows.set([await this.windowApi.get()]);
+    } catch {
+      this.windows.set([]);
+    }
+  }
+
   logout(): void {
-    this.auth.logout();
+    void this.auth.logout();
   }
 }

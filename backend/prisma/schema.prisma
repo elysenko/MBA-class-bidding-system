@@ -1,3 +1,9 @@
+// MBA class bidding system — data model.
+//
+// Table/column names are mapped to snake_case because the resolution engine and
+// a few hot read paths use raw SQL (window functions, advisory locks) that Prisma
+// cannot express.
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,16 +13,104 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum UserRole {
+  ADMIN
+  USER
 }
 
-enum Role {
-  USER
-  ADMIN
+enum BidStatus {
+  ACTIVE
+  WON
+  LOST
+  CANCELLED
+}
+
+/// Both administrators and students. Administrators carry `passwordHash` +
+/// `username`; students authenticate with one-time `LoginToken`s instead.
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  username     String?   @unique
+  name         String?
+  passwordHash String?   @map("password_hash")
+  role         UserRole  @default(USER)
+  isRoot       Boolean   @default(false) @map("is_root")
+  pointBalance Int       @default(1000) @map("point_balance")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  bids        Bid[]
+  loginTokens LoginToken[]
+
+  @@index([role])
+  @@map("users")
+}
+
+/// Single-use, hashed sign-in token emailed to a student.
+model LoginToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  delivered Boolean   @default(false)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, usedAt])
+  @@map("login_tokens")
+}
+
+model Class {
+  id        String   @id @default(uuid())
+  name      String
+  code      String   @default("")
+  faculty   String   @default("")
+  term      String   @default("")
+  seatCap   Int      @default(30) @map("seat_cap")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  bids Bid[]
+
+  @@map("classes")
+}
+
+model Bid {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  classId   String    @map("class_id")
+  amount    Int
+  status    BidStatus @default(ACTIVE)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@index([classId, amount])
+  @@index([userId, status])
+  @@map("bids")
+}
+
+/// Exactly one row (`id = 1`) governs bidding for every class.
+model BiddingWindow {
+  id         Int       @id @default(1)
+  opensAt    DateTime  @map("opens_at")
+  closesAt   DateTime  @map("closes_at")
+  resolvedAt DateTime? @map("resolved_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@map("bidding_window")
+}
+
+/// Admin-editable credentials that override / fill in for environment variables.
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
 }

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { ClassesApi } from '../core/api/classes.api';
 import { ClassSeat } from '../core/models';
 import { ErrorBannerComponent } from '../shared/error-banner.component';
 import { ModalComponent } from '../shared/modal.component';
@@ -18,6 +19,7 @@ import { ModalComponent } from '../shared/modal.component';
 export class AdminClassesComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly classesApi = inject(ClassesApi);
 
   private readonly queryParams = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
@@ -30,16 +32,17 @@ export class AdminClassesComponent {
   readonly draftFaculty = signal('');
   readonly draftSeatCap = signal<number | null>(30);
 
-  readonly classes = signal<ClassSeat[]>([
-    { id: 'c1', name: 'Advanced Corporate Valuation', code: 'FIN-641', faculty: 'Prof. E. Marchetti', term: 'Spring 2026', seatCap: 30, seatsTaken: null, bidCount: 46, myBidAmount: null, myBidStatus: null },
-    { id: 'c2', name: 'Negotiation & Influence', code: 'MGT-512', faculty: 'Prof. D. Okonjo', term: 'Spring 2026', seatCap: 24, seatsTaken: null, bidCount: 61, myBidAmount: null, myBidStatus: null },
-    { id: 'c3', name: 'Data-Driven Marketing Strategy', code: 'MKT-528', faculty: 'Prof. L. Hartmann', term: 'Spring 2026', seatCap: 40, seatsTaken: null, bidCount: 33, myBidAmount: null, myBidStatus: null },
-    { id: 'c4', name: 'Private Equity & Buyouts', code: 'FIN-702', faculty: 'Prof. S. Vandermeer', term: 'Spring 2026', seatCap: 18, seatsTaken: null, bidCount: 72, myBidAmount: null, myBidStatus: null },
-    { id: 'c5', name: 'Operations & Supply Chain Analytics', code: 'OPS-544', faculty: 'Prof. R. Nakamura', term: 'Spring 2026', seatCap: 35, seatsTaken: null, bidCount: 21, myBidAmount: null, myBidStatus: null },
-    { id: 'c6', name: 'Entrepreneurial Finance', code: 'ENT-611', faculty: 'Prof. A. Bekele', term: 'Spring 2026', seatCap: 30, seatsTaken: null, bidCount: 38, myBidAmount: null, myBidStatus: null },
-  ]);
+  readonly classes = signal<ClassSeat[]>([]);
 
   readonly createModalOpen = computed(() => this.queryParams().get('modal') === 'new');
+
+  constructor() {
+    void this.load();
+  }
+
+  private async load(): Promise<void> {
+    this.classes.set(await this.classesApi.list());
+  }
 
   openCreate(): void {
     this.formError.set(null);
@@ -47,7 +50,7 @@ export class AdminClassesComponent {
     this.draftCode.set('');
     this.draftFaculty.set('');
     this.draftSeatCap.set(30);
-    this.router.navigate([], {
+    void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { modal: 'new' },
       queryParamsHandling: 'merge',
@@ -55,14 +58,14 @@ export class AdminClassesComponent {
   }
 
   closeModal(): void {
-    this.router.navigate([], {
+    void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { modal: null },
       queryParamsHandling: 'merge',
     });
   }
 
-  create(): void {
+  async create(): Promise<void> {
     const name = this.draftName().trim();
     const seatCap = Number(this.draftSeatCap() ?? 0);
     if (!name) {
@@ -73,23 +76,22 @@ export class AdminClassesComponent {
       this.formError.set('Seat cap must be at least 1.');
       return;
     }
-    this.formError.set(null);
-    this.classes.update((rows) => [
-      ...rows,
-      {
-        id: `c${rows.length + 1}${name.length}`,
+    try {
+      await this.classesApi.create({
         name,
-        code: this.draftCode().trim() || 'NEW-000',
-        faculty: this.draftFaculty().trim() || 'To be announced',
-        term: 'Spring 2026',
+        code: this.draftCode().trim(),
+        faculty: this.draftFaculty().trim(),
+        term: this.classes()[0]?.term ?? '',
         seatCap,
-        seatsTaken: null,
-        bidCount: 0,
-        myBidAmount: null,
-        myBidStatus: null,
-      },
-    ]);
-    this.notice.set(`${name} added with ${seatCap} seats.`);
-    this.closeModal();
+      });
+      this.formError.set(null);
+      await this.load();
+      this.notice.set(`${name} added with ${seatCap} seats.`);
+      this.closeModal();
+    } catch (error) {
+      this.formError.set(
+        error instanceof Error ? error.message : 'That class could not be created.',
+      );
+    }
   }
 }

@@ -1,7 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ViewChild,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from '../core/auth.service';
+import { ClassesApi } from '../core/api/classes.api';
+import { WindowApi } from '../core/api/window.api';
+import { BidsApi } from '../core/api/bids.api';
 import { BiddingWindow, ClassSeat } from '../core/models';
 import { BalanceMeterComponent } from '../shared/balance-meter.component';
 import { ErrorBannerComponent } from '../shared/error-banner.component';
@@ -26,9 +36,15 @@ import { BidFormComponent } from './bid-form.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ClassDetailComponent {
+  /** Present only while the bid dialog is open; used to echo server errors. */
+  @ViewChild(BidFormComponent) private bidForm?: BidFormComponent;
+
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
+  private readonly classesApi = inject(ClassesApi);
+  private readonly windowApi = inject(WindowApi);
+  private readonly bidsApi = inject(BidsApi);
 
   private readonly params = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
@@ -39,28 +55,12 @@ export class ClassDetailComponent {
 
   readonly balance = this.auth.pointBalance;
   readonly notice = signal<string | null>(null);
+  readonly loaded = signal(false);
 
-  readonly windows = signal<BiddingWindow[]>([
-    {
-      opensAt: '12 Mar 2026, 09:00',
-      closesAt: '19 Mar 2026, 17:00',
-      resolvedAt: null,
-      state: 'open',
-    },
-  ]);
-
+  readonly windows = signal<BiddingWindow[]>([]);
   readonly biddingWindow = computed<BiddingWindow | null>(() => this.windows()[0] ?? null);
 
-  readonly classes = signal<ClassSeat[]>([
-    { id: 'c1', name: 'Advanced Corporate Valuation', code: 'FIN-641', faculty: 'Prof. E. Marchetti', term: 'Spring 2026', seatCap: 30, seatsTaken: null, bidCount: 46, myBidAmount: 240, myBidStatus: 'active' },
-    { id: 'c2', name: 'Negotiation & Influence', code: 'MGT-512', faculty: 'Prof. D. Okonjo', term: 'Spring 2026', seatCap: 24, seatsTaken: null, bidCount: 61, myBidAmount: 310, myBidStatus: 'active' },
-    { id: 'c3', name: 'Data-Driven Marketing Strategy', code: 'MKT-528', faculty: 'Prof. L. Hartmann', term: 'Spring 2026', seatCap: 40, seatsTaken: null, bidCount: 33, myBidAmount: null, myBidStatus: null },
-    { id: 'c4', name: 'Private Equity & Buyouts', code: 'FIN-702', faculty: 'Prof. S. Vandermeer', term: 'Spring 2026', seatCap: 18, seatsTaken: null, bidCount: 72, myBidAmount: 180, myBidStatus: 'active' },
-    { id: 'c5', name: 'Operations & Supply Chain Analytics', code: 'OPS-544', faculty: 'Prof. R. Nakamura', term: 'Spring 2026', seatCap: 35, seatsTaken: null, bidCount: 21, myBidAmount: null, myBidStatus: null },
-    { id: 'c6', name: 'Entrepreneurial Finance', code: 'ENT-611', faculty: 'Prof. A. Bekele', term: 'Spring 2026', seatCap: 30, seatsTaken: null, bidCount: 38, myBidAmount: null, myBidStatus: null },
-    { id: 'c7', name: 'Behavioural Economics for Managers', code: 'ECO-533', faculty: 'Prof. C. Lindqvist', term: 'Spring 2026', seatCap: 45, seatsTaken: null, bidCount: 12, myBidAmount: null, myBidStatus: null },
-    { id: 'c8', name: 'Global Macro & Policy', code: 'ECO-708', faculty: 'Prof. M. Alvarez', term: 'Spring 2026', seatCap: 30, seatsTaken: null, bidCount: 29, myBidAmount: null, myBidStatus: null },
-  ]);
+  readonly classes = signal<ClassSeat[]>([]);
 
   readonly current = computed(
     () => this.classes().find((row) => row.id === this.params().get('id')) ?? null,
@@ -79,8 +79,26 @@ export class ClassDetailComponent {
     () => this.balance() - this.committed() + (this.current()?.myBidAmount ?? 0),
   );
 
+  constructor() {
+    void this.load();
+  }
+
+  private async load(): Promise<void> {
+    try {
+      const [classes, window] = await Promise.all([
+        this.classesApi.list(),
+        this.windowApi.get(),
+      ]);
+      this.classes.set(classes);
+      this.windows.set([window]);
+      await this.auth.refresh();
+    } finally {
+      this.loaded.set(true);
+    }
+  }
+
   openBid(): void {
-    this.router.navigate([], {
+    void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { modal: 'bid' },
       queryParamsHandling: 'merge',
@@ -88,30 +106,44 @@ export class ClassDetailComponent {
   }
 
   closeModal(): void {
-    this.router.navigate([], {
+    void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { modal: null },
       queryParamsHandling: 'merge',
     });
   }
 
-  placeBid(amount: number): void {
-    const id = this.current()?.id;
-    this.classes.update((rows) =>
-      rows.map((row) =>
-        row.id === id ? { ...row, myBidAmount: amount, myBidStatus: 'active' as const } : row,
-      ),
-    );
-    this.notice.set(`Bid of ${amount} points recorded for ${this.current()?.name}.`);
-    this.closeModal();
+  async placeBid(amount: number): Promise<void> {
+    const row = this.current();
+    if (!row) return;
+    try {
+      const response = await this.bidsApi.place(row.id, amount);
+      this.auth.setBalance(response.balance.pointBalance);
+      this.notice.set(`Bid of ${amount} points recorded for ${row.name}.`);
+      this.closeModal();
+      await this.load();
+    } catch (error) {
+      this.notice.set(null);
+      this.bidForm?.showServerError(
+        error instanceof Error ? error.message : 'That bid could not be saved.',
+      );
+    }
   }
 
-  cancelBid(): void {
-    const id = this.current()?.id;
-    this.classes.update((rows) =>
-      rows.map((row) => (row.id === id ? { ...row, myBidAmount: null, myBidStatus: null } : row)),
-    );
-    this.notice.set('Bid cancelled. Those points are available to commit again.');
-    this.closeModal();
+  async cancelBid(): Promise<void> {
+    const row = this.current();
+    if (!row?.myBidId) return;
+    try {
+      const response = await this.bidsApi.cancel(row.myBidId);
+      this.auth.setBalance(response.balance.pointBalance);
+      this.notice.set('Bid cancelled. Those points are available to commit again.');
+      this.closeModal();
+      await this.load();
+    } catch (error) {
+      this.notice.set(null);
+      this.bidForm?.showServerError(
+        error instanceof Error ? error.message : 'That bid could not be cancelled.',
+      );
+    }
   }
 }

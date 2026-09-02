@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input, computed, signal } from '@angular/core';
 import { BiddingWindow, WindowState } from '../core/models';
+import { countdownTo } from '../core/format';
 
 /** Renders the single global bidding window as pending | open | closed. */
 @Component({
@@ -33,7 +34,7 @@ export class WindowStatusComponent {
 
   readonly detail = computed(() => {
     const w = this.current();
-    if (!w) {
+    if (!w || !w.closesAtIso) {
       return 'No bidding window has been configured.';
     }
     switch (this.state()) {
@@ -48,10 +49,10 @@ export class WindowStatusComponent {
     }
   });
 
-  /** Static countdown copy — the mockup has no live clock. */
-  readonly countdown = computed(() => this.current()?.closesAt ? '2d 14h 08m' : '—');
+  /** Time left until the real close instant. */
+  readonly countdown = computed(() => countdownTo(this.current()?.closesAtIso ?? null));
 
-  readonly tone = computed(() =>
-    ({ open: 'open', closed: 'closed', pending: 'pending' })[this.state()],
+  readonly tone = computed(
+    () => ({ open: 'open', closed: 'closed', pending: 'pending' })[this.state()],
   );
 }

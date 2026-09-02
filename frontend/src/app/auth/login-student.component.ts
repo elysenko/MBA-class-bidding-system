@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ErrorBannerComponent } from '../shared/error-banner.component';
 
@@ -15,22 +15,25 @@ import { ErrorBannerComponent } from '../shared/error-banner.component';
 })
 export class LoginStudentComponent {
   private readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
 
   readonly token = signal('');
   readonly error = signal<string | null>(null);
   readonly requested = signal(false);
 
-  submit(): void {
-    this.error.set(this.auth.studentLogin(this.token()));
+  async submit(): Promise<void> {
+    this.error.set(await this.auth.studentLogin(this.token()));
   }
 
+  /**
+   * Links are re-issued by an administrator (there is no self-service email
+   * step), so this only explains what to expect.
+   */
   requestLink(): void {
     this.requested.set(true);
   }
 
-  demo(): void {
-    this.auth.demoLogin('student');
-    this.router.navigate(['/classes']);
+  /** Signs in as the first seeded student account. */
+  async demo(): Promise<void> {
+    this.error.set(await this.auth.demoLogin('student'));
   }
 }

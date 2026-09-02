@@ -36,6 +36,14 @@ export class BidFormComponent {
     return [25, 50, 100, 200, 400].filter((value) => value <= cap);
   });
 
+  /**
+   * Lets the host surface a server rejection (closed window, over balance) in
+   * the same place the client-side guards report, verbatim.
+   */
+  showServerError(message: string): void {
+    this.error.set(message);
+  }
+
   setAmount(value: number): void {
     this.amount.set(value);
   }

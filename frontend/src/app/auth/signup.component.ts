@@ -5,9 +5,9 @@ import { AuthService } from '../core/auth.service';
 import { ErrorBannerComponent } from '../shared/error-banner.component';
 
 /**
- * Public signup is gated behind ALLOW_PUBLIC_SIGNUP and is off by default —
- * accounts are provisioned by the root administrator. Both states are shown so
- * the disabled copy and the working form can each be reviewed.
+ * Public signup is gated behind ALLOW_PUBLIC_SIGNUP on the server and is off by
+ * default — accounts are provisioned by the root administrator. The form posts
+ * to the real endpoint, which answers 403 while the flag is off.
  */
 @Component({
   selector: 'app-signup',
@@ -27,8 +27,8 @@ export class SignupComponent {
   readonly email = signal('');
   readonly error = signal<string | null>(null);
 
-  submit(): void {
-    this.error.set(this.auth.signup(this.name(), this.email()));
+  async submit(): Promise<void> {
+    this.error.set(await this.auth.signup(this.name(), this.email()));
   }
 
   toggleFlag(): void {

@@ -24,12 +24,12 @@ export class RootRedirectComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
-  ngOnInit(): void {
-    if (this.auth.isAdmin()) {
-      this.router.navigate(['/admin']);
+  async ngOnInit(): Promise<void> {
+    const identity = await this.auth.bootstrap();
+    if (!identity) {
+      await this.router.navigateByUrl('/login');
       return;
     }
-    this.auth.ensureSession('student');
-    this.router.navigate(['/classes']);
+    await this.router.navigateByUrl(identity.role === 'admin' ? '/admin' : '/classes');
   }
 }

@@ -24,6 +24,8 @@ export interface ClassSeat {
   seatCap: number;
   seatsTaken: number | null;
   bidCount: number;
+  /** Set only for the signed-in student's own bid — never another student's. */
+  myBidId: string | null;
   myBidAmount: number | null;
   myBidStatus: BidStatus | null;
 }
@@ -53,7 +55,8 @@ export interface ClassResultRow {
   studentName: string;
   studentEmail: string;
   amount: number;
-  outcome: Exclude<BidStatus, 'active'>;
+  /** `active` only appears before the round has been resolved. */
+  outcome: Exclude<BidStatus, 'cancelled'>;
   rank: number;
 }
 
@@ -78,10 +81,15 @@ export interface AdminAccount {
 }
 
 export interface BiddingWindow {
+  /** Display strings — the templates render these directly. */
   opensAt: string;
   closesAt: string;
   resolvedAt: string | null;
   state: WindowState;
+  /** Raw ISO instants, for form fields and countdowns. */
+  opensAtIso: string | null;
+  closesAtIso: string | null;
+  resolvedAtIso: string | null;
 }
 
 export interface SettingEntry {

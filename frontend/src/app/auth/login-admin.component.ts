@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ErrorBannerComponent } from '../shared/error-banner.component';
 
@@ -15,18 +15,17 @@ import { ErrorBannerComponent } from '../shared/error-banner.component';
 })
 export class LoginAdminComponent {
   private readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
 
   readonly username = signal('');
   readonly password = signal('');
   readonly error = signal<string | null>(null);
 
-  submit(): void {
-    this.error.set(this.auth.adminLogin(this.username(), this.password()));
+  async submit(): Promise<void> {
+    this.error.set(await this.auth.adminLogin(this.username(), this.password()));
   }
 
-  demo(): void {
-    this.auth.demoLogin('admin');
-    this.router.navigate(['/admin']);
+  /** Signs in as the seeded root administrator. */
+  async demo(): Promise<void> {
+    this.error.set(await this.auth.demoLogin('admin'));
   }
 }

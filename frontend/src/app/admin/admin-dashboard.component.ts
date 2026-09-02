@@ -2,6 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { AdminApi } from '../core/api/admin.api';
+import { ClassesApi } from '../core/api/classes.api';
+import { WindowApi } from '../core/api/window.api';
 import { BiddingWindow, ClassSeat, StudentAccount } from '../core/models';
 import { ErrorBannerComponent } from '../shared/error-banner.component';
 import { ModalComponent } from '../shared/modal.component';
@@ -21,6 +24,9 @@ const RESET_PHRASE = 'RESET POINTS';
 export class AdminDashboardComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly adminApi = inject(AdminApi);
+  private readonly classesApi = inject(ClassesApi);
+  private readonly windowApi = inject(WindowApi);
 
   private readonly queryParams = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
@@ -31,30 +37,11 @@ export class AdminDashboardComponent {
   readonly resetError = signal<string | null>(null);
   readonly notice = signal<string | null>(null);
 
-  readonly windows = signal<BiddingWindow[]>([
-    {
-      opensAt: '12 Mar 2026, 09:00',
-      closesAt: '19 Mar 2026, 17:00',
-      resolvedAt: null,
-      state: 'open',
-    },
-  ]);
-
+  readonly windows = signal<BiddingWindow[]>([]);
   readonly biddingWindow = computed<BiddingWindow | null>(() => this.windows()[0] ?? null);
 
-  readonly classes = signal<ClassSeat[]>([
-    { id: 'c1', name: 'Advanced Corporate Valuation', code: 'FIN-641', faculty: 'Prof. E. Marchetti', term: 'Spring 2026', seatCap: 30, seatsTaken: null, bidCount: 46, myBidAmount: null, myBidStatus: null },
-    { id: 'c2', name: 'Negotiation & Influence', code: 'MGT-512', faculty: 'Prof. D. Okonjo', term: 'Spring 2026', seatCap: 24, seatsTaken: null, bidCount: 61, myBidAmount: null, myBidStatus: null },
-    { id: 'c4', name: 'Private Equity & Buyouts', code: 'FIN-702', faculty: 'Prof. S. Vandermeer', term: 'Spring 2026', seatCap: 18, seatsTaken: null, bidCount: 72, myBidAmount: null, myBidStatus: null },
-    { id: 'c3', name: 'Data-Driven Marketing Strategy', code: 'MKT-528', faculty: 'Prof. L. Hartmann', term: 'Spring 2026', seatCap: 40, seatsTaken: null, bidCount: 33, myBidAmount: null, myBidStatus: null },
-  ]);
-
-  readonly students = signal<StudentAccount[]>([
-    { id: 's1', name: 'Priya Raghunathan', email: 'priya.raghunathan@mba.example.edu', pointBalance: 1000, activeBids: 3, tokenState: 'used', emailDelivered: true, createdAt: '02 Mar 2026' },
-    { id: 's2', name: 'Tomas Delacroix', email: 'tomas.delacroix@mba.example.edu', pointBalance: 1000, activeBids: 2, tokenState: 'used', emailDelivered: true, createdAt: '02 Mar 2026' },
-    { id: 's3', name: 'Amara Nwosu', email: 'amara.nwosu@mba.example.edu', pointBalance: 1000, activeBids: 4, tokenState: 'pending', emailDelivered: false, createdAt: '04 Mar 2026' },
-    { id: 's4', name: 'Jonas Lindberg', email: 'jonas.lindberg@mba.example.edu', pointBalance: 1000, activeBids: 0, tokenState: 'expired', emailDelivered: true, createdAt: '28 Feb 2026' },
-  ]);
+  readonly classes = signal<ClassSeat[]>([]);
+  readonly students = signal<StudentAccount[]>([]);
 
   readonly totalSeats = computed(() =>
     this.classes().reduce((sum, row) => sum + row.seatCap, 0),
@@ -69,16 +56,33 @@ export class AdminDashboardComponent {
     () => this.students().filter((row) => !row.emailDelivered).length,
   );
   readonly hottest = computed(() =>
-    [...this.classes()].sort((a, b) => b.bidCount / b.seatCap - a.bidCount / a.seatCap).slice(0, 4),
+    [...this.classes()]
+      .sort((a, b) => b.bidCount / Math.max(1, b.seatCap) - a.bidCount / Math.max(1, a.seatCap))
+      .slice(0, 4),
   );
 
   readonly resetModalOpen = computed(() => this.queryParams().get('modal') === 'confirm-reset');
   readonly canReset = computed(() => this.typed().trim() === RESET_PHRASE);
 
+  constructor() {
+    void this.load();
+  }
+
+  private async load(): Promise<void> {
+    const [classes, students, window] = await Promise.all([
+      this.classesApi.list(),
+      this.adminApi.listStudents(),
+      this.windowApi.get(),
+    ]);
+    this.classes.set(classes);
+    this.students.set(students);
+    this.windows.set([window]);
+  }
+
   openReset(): void {
     this.typed.set('');
     this.resetError.set(null);
-    this.router.navigate([], {
+    void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { modal: 'confirm-reset' },
       queryParamsHandling: 'merge',
@@ -86,25 +90,29 @@ export class AdminDashboardComponent {
   }
 
   closeModal(): void {
-    this.router.navigate([], {
+    void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { modal: null },
       queryParamsHandling: 'merge',
     });
   }
 
-  confirmReset(): void {
+  async confirmReset(): Promise<void> {
     if (!this.canReset()) {
       this.resetError.set(`Type ${RESET_PHRASE} exactly to confirm.`);
       return;
     }
-    this.students.update((rows) =>
-      rows.map((row) => ({ ...row, pointBalance: 1000, activeBids: 0 })),
-    );
-    this.windows.update((rows) => rows.map((row) => ({ ...row, resolvedAt: null })));
-    this.notice.set(
-      'All balances reset to 1000 points, active bids cancelled, and the round reopened. Historical results were kept.',
-    );
-    this.closeModal();
+    try {
+      await this.adminApi.resetPoints();
+      await this.load();
+      this.notice.set(
+        'All balances reset to 1000 points, active bids cancelled, and the round reopened. Historical results were kept.',
+      );
+      this.closeModal();
+    } catch (error) {
+      this.resetError.set(
+        error instanceof Error ? error.message : 'Points could not be reset.',
+      );
+    }
   }
 }

@@ -3,6 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from '../core/auth.service';
+import { ClassesApi } from '../core/api/classes.api';
+import { WindowApi } from '../core/api/window.api';
 import { BiddingWindow, ClassSeat } from '../core/models';
 import { BalanceMeterComponent } from '../shared/balance-meter.component';
 import { WindowStatusComponent } from '../shared/window-status.component';
@@ -20,36 +22,21 @@ export class ClassListComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
+  private readonly classesApi = inject(ClassesApi);
+  private readonly windowApi = inject(WindowApi);
 
   private readonly params = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
   });
 
-  readonly loading = signal(false);
+  readonly loading = signal(true);
   readonly balance = this.auth.pointBalance;
 
-  readonly windows = signal<BiddingWindow[]>([
-    {
-      opensAt: '12 Mar 2026, 09:00',
-      closesAt: '19 Mar 2026, 17:00',
-      resolvedAt: null,
-      state: 'open',
-    },
-  ]);
-
+  readonly windows = signal<BiddingWindow[]>([]);
   readonly biddingWindow = computed<BiddingWindow | null>(() => this.windows()[0] ?? null);
   readonly windowOpen = computed(() => this.biddingWindow()?.state === 'open');
 
-  readonly classes = signal<ClassSeat[]>([
-    { id: 'c1', name: 'Advanced Corporate Valuation', code: 'FIN-641', faculty: 'Prof. E. Marchetti', term: 'Spring 2026', seatCap: 30, seatsTaken: null, bidCount: 46, myBidAmount: 240, myBidStatus: 'active' },
-    { id: 'c2', name: 'Negotiation & Influence', code: 'MGT-512', faculty: 'Prof. D. Okonjo', term: 'Spring 2026', seatCap: 24, seatsTaken: null, bidCount: 61, myBidAmount: 310, myBidStatus: 'active' },
-    { id: 'c3', name: 'Data-Driven Marketing Strategy', code: 'MKT-528', faculty: 'Prof. L. Hartmann', term: 'Spring 2026', seatCap: 40, seatsTaken: null, bidCount: 33, myBidAmount: null, myBidStatus: null },
-    { id: 'c4', name: 'Private Equity & Buyouts', code: 'FIN-702', faculty: 'Prof. S. Vandermeer', term: 'Spring 2026', seatCap: 18, seatsTaken: null, bidCount: 72, myBidAmount: 180, myBidStatus: 'active' },
-    { id: 'c5', name: 'Operations & Supply Chain Analytics', code: 'OPS-544', faculty: 'Prof. R. Nakamura', term: 'Spring 2026', seatCap: 35, seatsTaken: null, bidCount: 21, myBidAmount: null, myBidStatus: null },
-    { id: 'c6', name: 'Entrepreneurial Finance', code: 'ENT-611', faculty: 'Prof. A. Bekele', term: 'Spring 2026', seatCap: 30, seatsTaken: null, bidCount: 38, myBidAmount: null, myBidStatus: null },
-    { id: 'c7', name: 'Behavioural Economics for Managers', code: 'ECO-533', faculty: 'Prof. C. Lindqvist', term: 'Spring 2026', seatCap: 45, seatsTaken: null, bidCount: 12, myBidAmount: null, myBidStatus: null },
-    { id: 'c8', name: 'Global Macro & Policy', code: 'ECO-708', faculty: 'Prof. M. Alvarez', term: 'Spring 2026', seatCap: 30, seatsTaken: null, bidCount: 29, myBidAmount: null, myBidStatus: null },
-  ]);
+  readonly classes = signal<ClassSeat[]>([]);
 
   readonly query = computed(() => this.params().get('q') ?? '');
   readonly sort = computed(() => this.params().get('sort') ?? 'name');
@@ -86,6 +73,27 @@ export class ClassListComponent {
     return sorted;
   });
 
+  constructor() {
+    void this.load();
+  }
+
+  private async load(): Promise<void> {
+    this.loading.set(true);
+    try {
+      const [classes, window] = await Promise.all([
+        this.classesApi.list(),
+        this.windowApi.get(),
+      ]);
+      this.classes.set(classes);
+      this.windows.set([window]);
+      await this.auth.refresh();
+    } catch {
+      this.classes.set([]);
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
   setQuery(value: string): void {
     this.patch({ q: value || null });
   }
@@ -95,7 +103,7 @@ export class ClassListComponent {
   }
 
   private patch(queryParams: Record<string, string | null>): void {
-    this.router.navigate([], {
+    void this.router.navigate([], {
       relativeTo: this.route,
       queryParams,
       queryParamsHandling: 'merge',
@@ -103,14 +111,14 @@ export class ClassListComponent {
   }
 
   pressure(row: ClassSeat): string {
-    const ratio = row.bidCount / row.seatCap;
+    const ratio = row.bidCount / Math.max(1, row.seatCap);
     if (ratio >= 2) return 'Very high demand';
     if (ratio >= 1) return 'Oversubscribed';
     return 'Seats likely available';
   }
 
   pressureTone(row: ClassSeat): string {
-    const ratio = row.bidCount / row.seatCap;
+    const ratio = row.bidCount / Math.max(1, row.seatCap);
     if (ratio >= 2) return 'badge-danger';
     if (ratio >= 1) return 'badge-warning';
     return 'badge-success';
