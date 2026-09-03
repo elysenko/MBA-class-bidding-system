@@ -11,8 +11,9 @@ interface LoginResponse {
 export class AuthApi {
   private readonly api = inject(ApiClient);
 
-  me(): Promise<Identity> {
-    return this.api.get<Identity>('/auth/me');
+  /** 200 with `null` when there is no session — never 401, so an anonymous first load stays console-clean. */
+  me(): Promise<Identity | null> {
+    return this.api.get<Identity | null>('/auth/me');
   }
 
   async adminLogin(username: string, password: string): Promise<Identity> {

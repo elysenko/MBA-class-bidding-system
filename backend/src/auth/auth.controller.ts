@@ -5,19 +5,17 @@ import {
   Get,
   HttpCode,
   Post,
+  Req,
   Res,
   UnauthorizedException,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import type { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from './auth.service';
 import { AdminLoginDto, DemoLoginDto, SignupDto, StudentLoginDto } from './auth.dto';
-import { CurrentUser } from './current-user.decorator';
-import { SessionGuard } from './guards';
-import { SecurityService } from './security.service';
+import { SecurityService, SESSION_COOKIE } from './security.service';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -129,9 +127,33 @@ export class AuthController {
     return { ok: true };
   }
 
+  /**
+   * Session probe used on every page load (including the anonymous landing
+   * page) to decide where to route the visitor. It always answers 200 — with
+   * `null` when there is no valid session — so an unauthenticated first visit
+   * never shows up as a 401 in the console; only `SessionGuard`-protected
+   * routes still 401 for genuinely unauthorized requests.
+   */
   @Get('me')
-  @UseGuards(SessionGuard)
-  me(@CurrentUser() user: User): Record<string, unknown> {
+  @HttpCode(200)
+  async me(@Req() req: Request): Promise<Record<string, unknown> | null> {
+    const cookies = (req as Request & { cookies?: Record<string, string> }).cookies;
+    const raw =
+      cookies?.[SESSION_COOKIE] ??
+      (req.headers.authorization?.startsWith('Bearer ')
+        ? req.headers.authorization.slice(7)
+        : undefined);
+    if (!raw) {
+      return null;
+    }
+    const claims = this.security.verifySession(raw);
+    if (!claims) {
+      return null;
+    }
+    const user = await this.prisma.user.findUnique({ where: { id: claims.sub } });
+    if (!user) {
+      return null;
+    }
     return this.auth.identity(user);
   }
 }

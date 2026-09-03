@@ -81,7 +81,11 @@ export class AuthService {
       this.bootstrapping = this.authApi
         .me()
         .then((identity) => {
-          this.persist(identity);
+          if (identity) {
+            this.persist(identity);
+          } else {
+            this.clear();
+          }
           return identity;
         })
         .catch(() => {
