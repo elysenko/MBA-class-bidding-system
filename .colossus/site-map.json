@@ -1,0 +1,107 @@
+{
+  "site": {
+    "name": "tu-prep-og5nb22w",
+    "site_id": "tu-prep-og5nb22w"
+  },
+  "meta": {
+    "generated_by": "declared"
+  },
+  "front_end": {
+    "pages": [
+      {
+        "name": "Home",
+        "page_id": "home",
+        "url": "/",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Accounts",
+        "page_id": "accounts",
+        "url": "/accounts",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Admin",
+        "page_id": "admin",
+        "url": "/admin",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Login",
+        "page_id": "admin-login",
+        "url": "/admin/login",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Classes",
+        "page_id": "classes",
+        "url": "/classes",
+        "linked_page_ids": []
+      },
+      {
+        "name": ":id",
+        "page_id": "classes-id",
+        "url": "/classes/:id",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Edit",
+        "page_id": "classes-id-edit",
+        "url": "/classes/:id/edit",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Results",
+        "page_id": "classes-id-results",
+        "url": "/classes/:id/results",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Login",
+        "page_id": "login",
+        "url": "/login",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Token",
+        "page_id": "login-token",
+        "url": "/login/token",
+        "linked_page_ids": []
+      },
+      {
+        "name": "My-bids",
+        "page_id": "my-bids",
+        "url": "/my-bids",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Results",
+        "page_id": "results",
+        "url": "/results",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Settings",
+        "page_id": "settings",
+        "url": "/settings",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Signup",
+        "page_id": "signup",
+        "url": "/signup",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Window",
+        "page_id": "window",
+        "url": "/window",
+        "linked_page_ids": []
+      }
+    ]
+  },
+  "back_end": {
+    "tables": []
+  },
+  "generated_by": "declared"
+}

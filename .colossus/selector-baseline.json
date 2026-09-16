@@ -1,0 +1,8 @@
+{
+  "frontend/src": {
+    "nonKebab": 25,
+    "singleSegment": 4,
+    "dupInFile": 1,
+    "cssLocator": 0
+  }
+}
